@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# design prototype (reference only, not part of the app)
+/design/
+
+# docs & planning
+PRODUCT_STRATEGY.md
+implementation_plan.md
