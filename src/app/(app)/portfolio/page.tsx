@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { ChangeIndicator } from "@/components/ui/change-indicator";
 import { MiniDonut } from "@/components/ui/mini-donut";
 import { FadeIn } from "@/components/ui/fade-in";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -22,6 +23,14 @@ interface Liability {
   principalAmount: string; outstandingAmount: string;
   interestRate: string | null; emiAmount: string | null; emiDay: number | null;
   institution: string | null;
+}
+
+interface SnapshotData {
+  previousValue: number | null;
+  previousDate: string | null;
+  change: number;
+  changePercent: number;
+  history: { value: number; date: string }[];
 }
 
 const ASSET_CATEGORIES = [
@@ -54,6 +63,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 export default function PortfolioPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [liabs, setLiabs] = useState<Liability[]>([]);
+  const [snapshots, setSnapshots] = useState<Record<string, SnapshotData>>({});
   const [loading, setLoading] = useState(true);
   const [showAssetForm, setShowAssetForm] = useState(false);
   const [showLiabForm, setShowLiabForm] = useState(false);
@@ -65,9 +75,11 @@ export default function PortfolioPage() {
     Promise.all([
       fetch("/api/assets").then(r => r.json()),
       fetch("/api/liabilities").then(r => r.json()),
-    ]).then(([a, l]) => {
+      fetch("/api/assets/snapshots").then(r => r.json()).catch(() => ({})),
+    ]).then(([a, l, s]) => {
       setAssets(a);
       setLiabs(l);
+      setSnapshots(s);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -215,7 +227,22 @@ export default function PortfolioPage() {
                               <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name}</div>
                               {item.institution && <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{item.institution}</span>}
                             </div>
-                            <div className="mono" style={{ fontSize: 13, fontWeight: 500 }}>{formatINR(Number(item.currentValue))}</div>
+                            <div style={{ textAlign: "right" }}>
+                              <div className="mono" style={{ fontSize: 13, fontWeight: 500 }}>{formatINR(Number(item.currentValue))}</div>
+                              {(() => {
+                                const snap = snapshots[item.id];
+                                if (!snap || snap.previousValue == null) return null;
+                                const currentVal = Number(item.currentValue);
+                                const change = currentVal - snap.previousValue;
+                                const changePct = snap.previousValue > 0 ? (change / snap.previousValue) * 100 : 0;
+                                if (Math.abs(change) < 1) return null;
+                                return (
+                                  <div style={{ marginTop: 2 }}>
+                                    <ChangeIndicator value={change} percent={Math.round(changePct * 10) / 10} size="sm" compact />
+                                  </div>
+                                );
+                              })()}
+                            </div>
                             <button onClick={(e) => { e.stopPropagation(); setEditingAsset(item); setShowAssetForm(true); }}
                               style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--text-tertiary)" }}>
                               <Icon name="settings" size={14} />

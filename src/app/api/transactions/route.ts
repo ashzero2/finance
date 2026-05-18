@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { generateInsights } from "@/lib/insights";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest) {
     isRecurring: body.isRecurring || false,
     tags: body.tags || [],
   }).returning();
+
+  // Auto-regenerate insights after adding a transaction
+  generateInsights(session.user.id).catch(() => {});
 
   return NextResponse.json(txn, { status: 201 });
 }
