@@ -83,7 +83,11 @@ export function Sidebar({ activePath }: SidebarProps) {
               }}
             >
               <Icon name={item.icon} size={20} color={isActive ? "var(--accent)" : "var(--text-tertiary)"} />
-              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, letterSpacing: "0.02em" }}>
+              <span style={{
+                fontSize: 10, fontWeight: isActive ? 600 : 400, letterSpacing: "0.02em",
+                textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                maxWidth: "100%", lineHeight: 1.2,
+              }}>
                 {item.label}
               </span>
             </a>
