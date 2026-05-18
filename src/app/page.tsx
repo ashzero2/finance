@@ -1,15 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
-export default async function Home() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (session) {
-    redirect("/dashboard");
-  } else {
-    redirect("/login");
-  }
+/**
+ * Root page — just redirects.
+ * The proxy handles auth checks:
+ * - If logged in → /dashboard works
+ * - If not logged in → proxy redirects /dashboard to /login
+ */
+export default function Home() {
+  redirect("/dashboard");
 }

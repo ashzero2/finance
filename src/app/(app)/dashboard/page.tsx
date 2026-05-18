@@ -1,16 +1,9 @@
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-
-export default async function DashboardPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/login");
-  }
-
+/**
+ * Dashboard page — placeholder for Phase 5.
+ * Auth is enforced by the proxy (cookie check).
+ * Full session data will be fetched via API routes in Phase 5.
+ */
+export default function DashboardPage() {
   return (
     <div style={{ padding: 32 }}>
       <h1
@@ -24,8 +17,7 @@ export default async function DashboardPage() {
         Dashboard
       </h1>
       <p style={{ fontSize: 14, color: "var(--text-tertiary)" }}>
-        Welcome, {session.user.name || session.user.email}. Dashboard UI coming
-        in Phase 5.
+        Dashboard UI coming in Phase 5. You are logged in.
       </p>
     </div>
   );
