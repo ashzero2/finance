@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { goals } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+
+export async function GET(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const userGoals = await db.select().from(goals).where(eq(goals.userId, session.user.id));
+  return NextResponse.json(userGoals);
+}
+
+export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json();
+  const [goal] = await db.insert(goals).values({
+    userId: session.user.id,
+    name: body.name,
+    targetAmount: String(body.targetAmount || 0),
+    currentAmount: String(body.currentAmount || 0),
+    targetDate: body.targetDate || null,
+    priority: body.priority || "medium",
+    category: body.category || "other",
+    icon: body.icon || "target",
+    color: body.color || "#C9A84C",
+    monthlyContribution: body.monthlyContribution ? String(body.monthlyContribution) : null,
+  }).returning();
+
+  return NextResponse.json(goal, { status: 201 });
+}
