@@ -62,7 +62,7 @@ export function Sidebar({ activePath }: SidebarProps) {
 
       {/* Nav items */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, padding: "8px 10px" }}>
-        {NAV_ITEMS.map((item) => {
+        {[...NAV_ITEMS, { id: "settings", label: "Settings", icon: "settings", href: "/settings" }].map((item) => {
           const isActive = item.id === activeId;
           return (
             <a
