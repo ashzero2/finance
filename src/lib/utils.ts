@@ -65,6 +65,41 @@ export function getGreeting(): string {
 }
 
 /**
+ * Format a number with Indian grouping (commas) for display in inputs.
+ * e.g. 100000 → "1,00,000", 1234567 → "12,34,567"
+ */
+export function formatIndianNumber(value: string | number): string {
+  const num = typeof value === "string" ? value.replace(/,/g, "") : String(value);
+  if (!num || num === "-" || num === ".") return num;
+
+  const parts = num.split(".");
+  const intPart = parts[0];
+  const decPart = parts.length > 1 ? "." + parts[1] : "";
+
+  const isNeg = intPart.startsWith("-");
+  const digits = isNeg ? intPart.slice(1) : intPart;
+
+  if (digits.length <= 3) return intPart + decPart;
+
+  // Indian grouping: last 3 digits, then groups of 2
+  const last3 = digits.slice(-3);
+  const rest = digits.slice(0, -3);
+  const grouped = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+
+  return (isNeg ? "-" : "") + grouped + "," + last3 + decPart;
+}
+
+/**
+ * Parse a formatted Indian number string back to a raw number.
+ * e.g. "1,00,000" → 100000
+ */
+export function parseIndianNumber(formatted: string): number {
+  const cleaned = formatted.replace(/,/g, "");
+  const num = Number(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
  * Calculate months remaining until a deadline date.
  */
 export function getMonthsRemaining(deadline: string | Date): number {

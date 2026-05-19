@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { FadeIn } from "@/components/ui/fade-in";
 import { formatINR } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface BankEntry { name: string; amount: number }
 interface InvestmentEntry { name: string; amount: number }
@@ -135,8 +136,7 @@ export default function OnboardingPage() {
                   </div>
                   <div style={{ width: 140 }}>
                     <label style={labelStyle}>Balance (₹)</label>
-                    <input style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} type="number" placeholder="0" value={b.amount || ""}
-                      onChange={e => { const n = [...banks]; n[i].amount = Number(e.target.value); setBanks(n); }} />
+                    <CurrencyInput value={b.amount} onChange={v => { const n = [...banks]; n[i].amount = v; setBanks(n); }} placeholder="0" />
                   </div>
                 </div>
               </Card>
@@ -161,8 +161,7 @@ export default function OnboardingPage() {
                   </div>
                   <div style={{ width: 140 }}>
                     <label style={labelStyle}>Value (₹)</label>
-                    <input style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} type="number" placeholder="0" value={inv.amount || ""}
-                      onChange={e => { const n = [...investments]; n[i].amount = Number(e.target.value); setInvestments(n); }} />
+                    <CurrencyInput value={inv.amount} onChange={v => { const n = [...investments]; n[i].amount = v; setInvestments(n); }} placeholder="0" />
                   </div>
                 </div>
               </Card>
@@ -187,13 +186,11 @@ export default function OnboardingPage() {
                   </div>
                   <div style={{ width: 120 }}>
                     <label style={labelStyle}>Outstanding (₹)</label>
-                    <input style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} type="number" placeholder="0" value={l.amount || ""}
-                      onChange={e => { const n = [...loans]; n[i].amount = Number(e.target.value); setLoans(n); }} />
+                    <CurrencyInput value={l.amount} onChange={v => { const n = [...loans]; n[i].amount = v; setLoans(n); }} placeholder="0" />
                   </div>
                   <div style={{ width: 100 }}>
                     <label style={labelStyle}>EMI (₹)</label>
-                    <input style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} type="number" placeholder="0" value={l.emi || ""}
-                      onChange={e => { const n = [...loans]; n[i].emi = Number(e.target.value); setLoans(n); }} />
+                    <CurrencyInput value={l.emi} onChange={v => { const n = [...loans]; n[i].emi = v; setLoans(n); }} placeholder="0" />
                   </div>
                 </div>
               </Card>
@@ -210,15 +207,13 @@ export default function OnboardingPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Card hover={false} style={{ padding: 20 }}>
               <label style={labelStyle}>Monthly Income (₹)</label>
-              <input style={{ ...inputStyle, height: 48, fontSize: 20, fontWeight: 600, fontFamily: "var(--font-mono)" }}
-                type="number" placeholder="0" value={monthlyIncome || ""}
-                onChange={e => setMonthlyIncome(Number(e.target.value))} />
+              <CurrencyInput value={monthlyIncome} onChange={setMonthlyIncome} placeholder="0"
+                style={{ height: 48, fontSize: 20, fontWeight: 600 }} />
             </Card>
             <Card hover={false} style={{ padding: 20 }}>
               <label style={labelStyle}>Monthly Expenses (₹)</label>
-              <input style={{ ...inputStyle, height: 48, fontSize: 20, fontWeight: 600, fontFamily: "var(--font-mono)" }}
-                type="number" placeholder="0" value={monthlyExpenses || ""}
-                onChange={e => setMonthlyExpenses(Number(e.target.value))} />
+              <CurrencyInput value={monthlyExpenses} onChange={setMonthlyExpenses} placeholder="0"
+                style={{ height: 48, fontSize: 20, fontWeight: 600 }} />
             </Card>
             {monthlyIncome > 0 && monthlyExpenses > 0 && (
               <div style={{ textAlign: "center", padding: 12, color: "var(--text-tertiary)", fontSize: 14 }}>
@@ -250,9 +245,7 @@ export default function OnboardingPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
                 <div>
                   <label style={labelStyle}>Target Amount (₹)</label>
-                  <input style={{ ...inputStyle, fontFamily: "var(--font-mono)" }} type="number" placeholder="0"
-                    value={goal.targetAmount || ""}
-                    onChange={e => setGoal({ ...goal, targetAmount: Number(e.target.value) })} />
+                  <CurrencyInput value={goal.targetAmount} onChange={v => setGoal({ ...goal, targetAmount: v })} placeholder="0" />
                 </div>
                 <div>
                   <label style={labelStyle}>Target Date (optional)</label>

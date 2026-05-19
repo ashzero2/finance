@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR, getMonthsRemaining } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Goal {
   id: string; name: string; targetAmount: string; currentAmount: string;
@@ -387,6 +388,20 @@ function EfFormModal({ ef, onClose, onSave }: {
 function InputField({ label, value, onChange, type = "text", required = false }: {
   label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean;
 }) {
+  // Use CurrencyInput for rupee amount fields
+  if (type === "number" && label.includes("₹")) {
+    return (
+      <div>
+        <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>{label}</label>
+        <CurrencyInput
+          value={Number(value) || 0}
+          onChange={v => onChange(String(v))}
+          required={required}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>{label}</label>

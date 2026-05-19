@@ -8,6 +8,7 @@ import { TabPill } from "@/components/ui/tab-pill";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR, formatDateShort } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Transaction {
   id: string; type: string; amount: string; categoryId: string | null;
@@ -238,14 +239,14 @@ function TransactionForm({ categories, onClose, onSave }: {
             <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>
               Amount (₹)
             </label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-              placeholder="0" required step="any" autoFocus
-              style={{
-                width: "100%", height: 48, padding: "0 16px", borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--border)", background: "var(--bg-elevated)",
-                color: "var(--text-primary)", fontSize: 20, fontWeight: 600,
-                fontFamily: "var(--font-mono)", outline: "none",
-              }} />
+            <CurrencyInput
+              value={Number(amount) || 0}
+              onChange={v => setAmount(String(v))}
+              placeholder="0"
+              required
+              autoFocus
+              style={{ height: 48, fontSize: 20, fontWeight: 600 }}
+            />
           </div>
 
           {/* Description */}

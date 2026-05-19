@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Asset {
   id: string; name: string; category: string; subCategory: string | null;
@@ -431,6 +432,12 @@ function FormModal({ title, onClose, onSubmit, onDelete, fields }: {
                       }}>
                       {f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
+                  ) : f.type === "number" && f.label.includes("₹") ? (
+                    <CurrencyInput
+                      value={Number(values[f.name]) || 0}
+                      onChange={v => setValues(prev => ({ ...prev, [f.name]: v }))}
+                      required={f.required}
+                    />
                   ) : (
                     <input type={f.type} value={String(values[f.name] ?? "")}
                       onChange={e => setValues(v => ({ ...v, [f.name]: f.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value }))}
