@@ -26,7 +26,18 @@ export default function LoginPage() {
       setError(error.message || "Invalid credentials");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      // Check onboarding status before redirecting
+      try {
+        const res = await fetch("/api/onboarding");
+        const data = await res.json();
+        if (data.onboardingCompleted) {
+          router.push("/dashboard");
+        } else {
+          router.push("/onboarding");
+        }
+      } catch {
+        router.push("/dashboard");
+      }
     }
   };
 

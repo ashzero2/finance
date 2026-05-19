@@ -28,7 +28,7 @@ export default function RegisterPage() {
       setError(error.message || "Registration failed");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      router.push("/onboarding");
     }
   };
 
