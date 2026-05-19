@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR, getMonthsRemaining } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface Goal {
   id: string; name: string; targetAmount: string; currentAmount: string;
@@ -24,11 +26,6 @@ interface EmergencyFundData {
 }
 
 const GOAL_COLORS = ["#C9A84C", "#34D399", "#60A5FA", "#A78BFA", "#F87171", "#FB923C", "#FBBF24"];
-const GOAL_ICONS = [
-  { value: "target", label: "Target" }, { value: "shield", label: "Shield" },
-  { value: "car", label: "Car" }, { value: "plane", label: "Travel" },
-  { value: "laptop", label: "Laptop" }, { value: "home", label: "House" },
-];
 
 export default function GoalsPage() {
   const [goalsList, setGoalsList] = useState<Goal[]>([]);
@@ -38,6 +35,8 @@ export default function GoalsPage() {
   const [showEfForm, setShowEfForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const { showToast } = useToast();
 
   const fetchData = useCallback(() => {
     Promise.all([
@@ -185,9 +184,9 @@ export default function GoalsPage() {
         <GoalDetailModal goal={selectedGoal}
           onClose={() => setSelectedGoal(null)}
           onEdit={() => { setEditingGoal(selectedGoal); setSelectedGoal(null); setShowGoalForm(true); }}
-          onDelete={async () => {
-            await fetch(`/api/goals/${selectedGoal.id}`, { method: "DELETE" });
-            setSelectedGoal(null); fetchData();
+          onDelete={() => {
+            setSelectedGoal(null);
+            setDeleteConfirm({ id: selectedGoal.id, name: selectedGoal.name });
           }}
         />
       )}
@@ -208,6 +207,24 @@ export default function GoalsPage() {
         />
       )}
 
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title={`Delete ${deleteConfirm.name}?`}
+          message="This goal and all its progress data will be permanently removed."
+          onConfirm={async () => {
+            try {
+              const res = await fetch(`/api/goals/${deleteConfirm.id}`, { method: "DELETE" });
+              if (res.ok) showToast(`${deleteConfirm.name} deleted`, "success");
+              else showToast("Failed to delete", "error");
+            } catch { showToast("Failed to delete", "error"); }
+            setDeleteConfirm(null);
+            fetchData();
+          }}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
       {/* Emergency Fund Form Modal */}
       {showEfForm && (
         <EfFormModal ef={ef} onClose={() => setShowEfForm(false)}
@@ -223,7 +240,7 @@ export default function GoalsPage() {
 
 // ── Goal Detail Modal ──
 function GoalDetailModal({ goal, onClose, onEdit, onDelete }: {
-  goal: Goal; onClose: () => void; onEdit: () => void; onDelete: () => Promise<void>;
+  goal: Goal; onClose: () => void; onEdit: () => void; onDelete: () => void;
 }) {
   const pct = Number(goal.targetAmount) > 0 ? Number(goal.currentAmount) / Number(goal.targetAmount) : 0;
   const remaining = Number(goal.targetAmount) - Number(goal.currentAmount);

@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR, formatDateShort } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface Transaction {
   id: string; type: string; amount: string; categoryId: string | null;
@@ -25,6 +27,8 @@ export default function CashFlowPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
   const [showForm, setShowForm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const { showToast } = useToast();
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -42,7 +46,6 @@ export default function CashFlowPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const getCatName = (id: string | null) => cats.find(c => c.id === id)?.name || "Other";
-  const getCatIcon = (id: string | null) => cats.find(c => c.id === id)?.icon || "circle";
 
   const filtered = tab === "all" ? txns
     : tab === "income" ? txns.filter(t => t.type === "income")
@@ -135,7 +138,8 @@ export default function CashFlowPage() {
                       </div>
                       <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{formatDateShort(tx.date)}</div>
                     </div>
-                    <button onClick={() => handleDelete(tx.id)}
+                    <button onClick={() => setDeleteConfirm({ id: tx.id, name: tx.description || "Transaction" })}
+                      aria-label="Delete transaction"
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--text-tertiary)" }}>
                       <Icon name="x" size={14} />
                     </button>
@@ -148,6 +152,24 @@ export default function CashFlowPage() {
       </div>
 
       <div style={{ height: 32 }} />
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="Delete transaction?"
+          message={`Are you sure you want to delete "${deleteConfirm.name}"? This cannot be undone.`}
+          onConfirm={async () => {
+            try {
+              const res = await fetch(`/api/transactions/${deleteConfirm.id}`, { method: "DELETE" });
+              if (res.ok) showToast("Transaction deleted", "success");
+              else showToast("Failed to delete", "error");
+            } catch { showToast("Failed to delete", "error"); }
+            setDeleteConfirm(null);
+            fetchData();
+          }}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
 
       {/* Add Transaction Modal */}
       {showForm && (
@@ -167,13 +189,6 @@ export default function CashFlowPage() {
       )}
     </div>
   );
-
-  async function handleDelete(id: string) {
-    try {
-      await fetch(`/api/transactions/${id}`, { method: "DELETE" });
-    } catch {}
-    fetchData();
-  }
 }
 
 // ── Transaction Form Modal ──

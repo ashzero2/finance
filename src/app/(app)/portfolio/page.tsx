@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface Asset {
   id: string; name: string; category: string; subCategory: string | null;
@@ -71,6 +73,8 @@ export default function PortfolioPage() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [editingLiab, setEditingLiab] = useState<Liability | null>(null);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: "asset" | "liability"; id: string; name: string } | null>(null);
+  const { showToast } = useToast();
 
   const fetchData = useCallback(() => {
     Promise.all([
@@ -314,9 +318,9 @@ export default function PortfolioPage() {
             }
             setShowAssetForm(false); setEditingAsset(null); fetchData();
           }}
-          onDelete={editingAsset ? async () => {
-            await fetch(`/api/assets/${editingAsset.id}`, { method: "DELETE" });
-            setShowAssetForm(false); setEditingAsset(null); fetchData();
+          onDelete={editingAsset ? () => {
+            setShowAssetForm(false);
+            setDeleteConfirm({ type: "asset", id: editingAsset.id, name: editingAsset.name });
           } : undefined}
           fields={[
             { name: "name", label: "Name", type: "text", required: true, defaultValue: editingAsset?.name || "" },
@@ -342,9 +346,9 @@ export default function PortfolioPage() {
             }
             setShowLiabForm(false); setEditingLiab(null); fetchData();
           }}
-          onDelete={editingLiab ? async () => {
-            await fetch(`/api/liabilities/${editingLiab.id}`, { method: "DELETE" });
-            setShowLiabForm(false); setEditingLiab(null); fetchData();
+          onDelete={editingLiab ? () => {
+            setShowLiabForm(false);
+            setDeleteConfirm({ type: "liability", id: editingLiab.id, name: editingLiab.name });
           } : undefined}
           fields={[
             { name: "name", label: "Name", type: "text", required: true, defaultValue: editingLiab?.name || "" },
@@ -355,6 +359,33 @@ export default function PortfolioPage() {
             { name: "interestRate", label: "Interest Rate (%)", type: "number", defaultValue: editingLiab?.interestRate ? Number(editingLiab.interestRate) : "" },
             { name: "institution", label: "Institution", type: "text", defaultValue: editingLiab?.institution || "" },
           ]}
+        />
+      )}
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          title={`Delete ${deleteConfirm.name}?`}
+          message="This action cannot be undone. All associated data will be permanently removed."
+          onConfirm={async () => {
+            const url = deleteConfirm.type === "asset"
+              ? `/api/assets/${deleteConfirm.id}`
+              : `/api/liabilities/${deleteConfirm.id}`;
+            try {
+              const res = await fetch(url, { method: "DELETE" });
+              if (res.ok) {
+                showToast(`${deleteConfirm.name} deleted`, "success");
+              } else {
+                showToast("Failed to delete", "error");
+              }
+            } catch {
+              showToast("Failed to delete", "error");
+            }
+            setDeleteConfirm(null);
+            setEditingAsset(null);
+            setEditingLiab(null);
+            fetchData();
+          }}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </div>
@@ -372,7 +403,7 @@ interface FormField {
 function FormModal({ title, onClose, onSubmit, onDelete, fields }: {
   title: string; onClose: () => void;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onDelete?: () => void;
   fields: FormField[];
 }) {
   const [values, setValues] = useState<Record<string, unknown>>(() => {

@@ -25,6 +25,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   // Data
   const [banks, setBanks] = useState<BankEntry[]>([{ name: "", amount: 0 }]);
@@ -70,6 +71,7 @@ export default function OnboardingPage() {
       await new Promise(r => setTimeout(r, 200));
       router.push("/dashboard");
     } catch {
+      setError("Something went wrong. Please try again.");
       setSubmitting(false);
     }
   };
@@ -98,6 +100,16 @@ export default function OnboardingPage() {
       </div>
 
       <FadeIn key={step} delay={0}>
+        {/* Error */}
+        {error && (
+          <div style={{
+            padding: "10px 14px", borderRadius: "var(--radius-sm)", marginBottom: 16,
+            background: "var(--negative-dim)", color: "var(--negative)", fontSize: 13, fontWeight: 500,
+          }}>
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{steps[step].title}</h1>

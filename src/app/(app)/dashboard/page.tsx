@@ -9,7 +9,6 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { FadeIn } from "@/components/ui/fade-in";
 import { SectionHeader } from "@/components/ui/section-header";
-import { EmptyState } from "@/components/ui/empty-state";
 import { formatINR, formatDateShort, getGreeting, getMonthsRemaining } from "@/lib/utils";
 
 interface DashboardData {
@@ -143,13 +142,13 @@ export default function DashboardPage() {
             <QuickStat label="Liquidity" value={data.liquidity.total} icon="droplet" delay={150}
               sub={`${data.liquidity.items.length} account${data.liquidity.items.length !== 1 ? "s" : ""}`} />
             <QuickStat label="Monthly Burn" value={data.monthly.expenses} icon="trending-down" delay={200}
-              sub={`${data.monthly.savingsRate.toFixed(0)}% savings rate`} color="#F87171" />
-            <QuickStat label="Savings Rate" value={data.monthly.savingsRate}
-              format={(v) => v.toFixed(1) + "%"} icon="trending-up" delay={250}
+              sub={`${(Number(data.monthly.savingsRate) || 0).toFixed(0)}% savings rate`} color="#F87171" />
+            <QuickStat label="Savings Rate" value={Number(data.monthly.savingsRate) || 0}
+              format={(v) => (Number(v) || 0).toFixed(1) + "%"} icon="trending-up" delay={250}
               sub={formatINR(data.monthly.savings, { compact: true }) + "/mo saved"} color="#34D399" />
-            <QuickStat label="Runway" value={data.runway}
-              format={(v) => v.toFixed(1) + " mo"} icon="shield" delay={300}
-              sub={`${data.emergencyFund.monthsCovered.toFixed(1)} mo emergency`} color="#60A5FA" />
+            <QuickStat label="Runway" value={Number(data.runway) || 0}
+              format={(v) => (Number(v) || 0).toFixed(1) + " mo"} icon="shield" delay={300}
+              sub={`${(Number(data.emergencyFund.monthsCovered) || 0).toFixed(1)} mo emergency`} color="#60A5FA" />
           </div>
 
           {/* Goals Preview */}

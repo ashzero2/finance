@@ -6,7 +6,6 @@ import {
   goals,
   emergencyFund,
   transactions,
-  assetSnapshots,
 } from "@/lib/db/schema";
 import { eq, and, gte, desc } from "drizzle-orm";
 

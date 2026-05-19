@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { AppShell } from "@/components/layout/app-shell";
+import { ToastProvider } from "@/components/ui/toast";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: session, isPending: sessionLoading } = useSession();
@@ -79,7 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <LoadingScreen />;
   }
 
-  return <AppShell>{children}</AppShell>;
+  return <ToastProvider><AppShell>{children}</AppShell></ToastProvider>;
 }
 
 function LoadingScreen() {
