@@ -51,19 +51,26 @@ export default function OnboardingPage() {
 
   const handleFinish = async () => {
     setSubmitting(true);
-    await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        bankBalances: banks.filter(b => b.name && b.amount > 0),
-        investments: investments.filter(i => i.name && i.amount > 0),
-        loans: loans.filter(l => l.name && l.amount > 0),
-        monthlyIncome,
-        monthlyExpenses,
-        goal: goal.type ? goal : null,
-      }),
-    });
-    router.push("/dashboard");
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bankBalances: banks.filter(b => b.name && b.amount > 0),
+          investments: investments.filter(i => i.name && i.amount > 0),
+          loans: loans.filter(l => l.name && l.amount > 0),
+          monthlyIncome,
+          monthlyExpenses,
+          goal: goal.type ? goal : null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      // Small delay to ensure DB write is committed
+      await new Promise(r => setTimeout(r, 200));
+      router.push("/dashboard");
+    } catch {
+      setSubmitting(false);
+    }
   };
 
   const inputStyle: React.CSSProperties = {

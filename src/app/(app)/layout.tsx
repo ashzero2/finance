@@ -12,7 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
-  // Check onboarding status once session is loaded
+  // Check onboarding status whenever session loads or pathname changes
   useEffect(() => {
     if (sessionLoading) return;
 
@@ -25,26 +25,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     fetch("/api/onboarding")
       .then((r) => r.json())
       .then((data) => {
-        setOnboardingCompleted(data.onboardingCompleted ?? false);
+        const completed = data.onboardingCompleted ?? false;
+        setOnboardingCompleted(completed);
         setOnboardingChecked(true);
+
+        // Redirect logic
+        if (!completed && pathname !== "/onboarding") {
+          router.replace("/onboarding");
+        } else if (completed && pathname === "/onboarding") {
+          router.replace("/dashboard");
+        }
       })
       .catch(() => {
-        // If check fails, assume completed to avoid blocking
         setOnboardingCompleted(true);
         setOnboardingChecked(true);
       });
-  }, [session, sessionLoading, router]);
-
-  // Redirect logic after onboarding check
-  useEffect(() => {
-    if (!onboardingChecked || onboardingCompleted === null) return;
-
-    if (!onboardingCompleted && pathname !== "/onboarding") {
-      router.replace("/onboarding");
-    } else if (onboardingCompleted && pathname === "/onboarding") {
-      router.replace("/dashboard");
-    }
-  }, [onboardingChecked, onboardingCompleted, pathname, router]);
+  }, [session, sessionLoading, pathname, router]);
 
   // Loading state — show branded spinner
   if (sessionLoading || !onboardingChecked) {
