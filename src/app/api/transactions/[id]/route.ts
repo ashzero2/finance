@@ -11,20 +11,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const body = await request.json();
 
-  const [updated] = await db.update(transactions)
-    .set({
-      type: body.type,
-      amount: body.amount !== undefined ? String(Math.abs(body.amount)) : undefined,
-      categoryId: body.categoryId ?? undefined,
-      description: body.description ?? undefined,
-      date: body.date ?? undefined,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(transactions.id, id), eq(transactions.userId, session.user.id)))
-    .returning();
+  try {
+    const [updated] = await db.update(transactions)
+      .set({
+        type: body.type ?? undefined,
+        amount: body.amount !== undefined ? String(Math.abs(body.amount)) : undefined,
+        categoryId: body.categoryId ?? undefined,
+        description: body.description ?? undefined,
+        date: body.date ?? undefined,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(transactions.id, id), eq(transactions.userId, session.user.id)))
+      .returning();
 
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(updated);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(updated);
+  } catch (err) {
+    return NextResponse.json({ error: "Failed to update transaction" }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

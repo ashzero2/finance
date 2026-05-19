@@ -10,7 +10,7 @@ import { FadeIn } from "@/components/ui/fade-in";
 import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { formatINR, formatPercent } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 
 interface Asset {
   id: string; name: string; category: string; subCategory: string | null;
@@ -73,13 +73,13 @@ export default function PortfolioPage() {
 
   const fetchData = useCallback(() => {
     Promise.all([
-      fetch("/api/assets").then(r => r.json()),
-      fetch("/api/liabilities").then(r => r.json()),
-      fetch("/api/assets/snapshots").then(r => r.json()).catch(() => ({})),
+      fetch("/api/assets").then(r => r.ok ? r.json() : []),
+      fetch("/api/liabilities").then(r => r.ok ? r.json() : []),
+      fetch("/api/assets/snapshots").then(r => r.ok ? r.json() : {}).catch(() => ({})),
     ]).then(([a, l, s]) => {
-      setAssets(a);
-      setLiabs(l);
-      setSnapshots(s);
+      setAssets(Array.isArray(a) ? a : []);
+      setLiabs(Array.isArray(l) ? l : []);
+      setSnapshots(s || {});
     }).finally(() => setLoading(false));
   }, []);
 

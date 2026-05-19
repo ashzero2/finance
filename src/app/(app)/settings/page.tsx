@@ -23,14 +23,20 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings").then(r => r.json()).then(setSettings).finally(() => setLoading(false));
+    fetch("/api/settings")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && data.currency) setSettings(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const save = async (updates: Partial<Settings>) => {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
     setSaving(true);
-    await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
+    try {
+      await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
+    } catch {}
     setSaving(false);
   };
 

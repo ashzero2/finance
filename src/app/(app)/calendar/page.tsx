@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Icon } from "@/components/ui/icon";
 import { FadeIn } from "@/components/ui/fade-in";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatINR } from "@/lib/utils";
@@ -18,12 +17,13 @@ export default function CalendarPage() {
   useEffect(() => {
     // For MVP, upcoming items come from recurring transactions / liabilities EMIs
     // This is a placeholder that will be populated when the user has recurring data
-    fetch("/api/dashboard").then(r => r.json())
-      .then(data => {
-        // Extract upcoming-like items from liabilities with EMIs
+    fetch("/api/dashboard").then(r => r.ok ? r.json() : ({}))
+      .then((data: Record<string, unknown>) => {
+        // Extract upcoming-like items from recent transactions
         const upcoming: UpcomingItem[] = [];
-        if (data.recentTransactions) {
-          data.recentTransactions.forEach((t: { id: string; name: string; amount: number; date: string; type: string }) => {
+        const txns = data.recentTransactions as Array<{ id: string; name: string; amount: number; date: string; type: string }> | undefined;
+        if (txns) {
+          txns.forEach((t) => {
             upcoming.push({ id: t.id, name: t.name, amount: Math.abs(t.amount), date: t.date, type: t.type === "income" ? "income" : "expense" });
           });
         }

@@ -30,11 +30,11 @@ export default function CashFlowPage() {
 
   const fetchData = useCallback(() => {
     Promise.all([
-      fetch(`/api/transactions?month=${currentMonth}`).then(r => r.json()),
-      fetch("/api/categories").then(r => r.json()),
+      fetch(`/api/transactions?month=${currentMonth}`).then(r => r.ok ? r.json() : []),
+      fetch("/api/categories").then(r => r.ok ? r.json() : []),
     ]).then(([t, c]) => {
-      setTxns(t);
-      setCats(c);
+      setTxns(Array.isArray(t) ? t : []);
+      setCats(Array.isArray(c) ? c : []);
     }).finally(() => setLoading(false));
   }, [currentMonth]);
 
@@ -168,7 +168,9 @@ export default function CashFlowPage() {
   );
 
   async function handleDelete(id: string) {
-    await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    try {
+      await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    } catch {}
     fetchData();
   }
 }

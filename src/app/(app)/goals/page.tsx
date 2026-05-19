@@ -40,9 +40,12 @@ export default function GoalsPage() {
 
   const fetchData = useCallback(() => {
     Promise.all([
-      fetch("/api/goals").then(r => r.json()),
-      fetch("/api/emergency-fund").then(r => r.json()),
-    ]).then(([g, e]) => { setGoalsList(g); setEf(e); }).finally(() => setLoading(false));
+      fetch("/api/goals").then(r => r.ok ? r.json() : []),
+      fetch("/api/emergency-fund").then(r => r.ok ? r.json() : null),
+    ]).then(([g, e]) => {
+      setGoalsList(Array.isArray(g) ? g : []);
+      setEf(e && e.id ? e : null);
+    }).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);

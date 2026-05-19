@@ -19,6 +19,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const userId = session.user.id;
 
+  // Idempotency guard — don't re-run if already completed
+  const [existingSettings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+  if (existingSettings?.onboardingCompleted) {
+    return NextResponse.json({ success: true, message: "Onboarding already completed" });
+  }
+
   // Step 1: Create bank/savings assets
   if (body.bankBalances && Array.isArray(body.bankBalances)) {
     for (const b of body.bankBalances) {
