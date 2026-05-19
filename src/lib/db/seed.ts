@@ -37,7 +37,7 @@ async function seed() {
   console.log("🌱 Seeding default categories...");
 
   for (const cat of defaultCategories) {
-    await db    docker compose up -d --build
+    await db
       .insert(categories)
       .values({
         userId: null, // system default
