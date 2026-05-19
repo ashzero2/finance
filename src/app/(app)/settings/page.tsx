@@ -64,6 +64,26 @@ export default function SettingsPage() {
         <Card hover={false} style={{ padding: 24 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>Theme</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {(["dark", "light", "system"] as const).map(t => (
+                  <button key={t} onClick={() => save({ theme: t })}
+                    style={{
+                      flex: 1, height: 40, borderRadius: "var(--radius-sm)", border: "none", cursor: "pointer",
+                      background: settings.theme === t ? "var(--accent)" : "var(--bg-elevated)",
+                      color: settings.theme === t ? "var(--bg-root)" : "var(--text-secondary)",
+                      fontSize: 13, fontWeight: 600, fontFamily: "var(--font-sans)",
+                      textTransform: "capitalize", transition: "all 0.15s",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    }}>
+                    <Icon name={t === "dark" ? "moon" : t === "light" ? "sun" : "monitor"} size={14}
+                      color={settings.theme === t ? "var(--bg-root)" : "var(--text-tertiary)"} />
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>Currency</label>
               <select style={selectStyle} value={settings.currency} onChange={e => save({ currency: e.target.value })}>
                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
