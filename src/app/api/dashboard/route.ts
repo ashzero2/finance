@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
   }
   const userId = session.user.id;
 
+  // Current month start for filtering
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+
   // Fetch all data in parallel
   const [
     userAssets,
@@ -18,6 +22,7 @@ export async function GET(request: NextRequest) {
     userGoals,
     userEmergencyFund,
     recentTxns,
+    monthTxns,
     userInsights,
     monthlySnapshots,
   ] = await Promise.all([
@@ -26,6 +31,8 @@ export async function GET(request: NextRequest) {
     db.select().from(goals).where(eq(goals.userId, userId)),
     db.select().from(emergencyFund).where(eq(emergencyFund.userId, userId)).limit(1),
     db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.date)).limit(10),
+    // Separate query for ALL current month transactions (not limited to 10)
+    db.select().from(transactions).where(and(eq(transactions.userId, userId), gte(transactions.date, monthStart))),
     db.select().from(insights).where(and(eq(insights.userId, userId), eq(insights.isDismissed, false))).orderBy(desc(insights.generatedAt)).limit(5),
     db.select().from(financialSnapshots).where(eq(financialSnapshots.userId, userId)).orderBy(desc(financialSnapshots.snapshotDate)).limit(12),
   ]);
@@ -36,10 +43,7 @@ export async function GET(request: NextRequest) {
   const netWorth = totalAssets - totalLiabilities;
   const totalLiquid = userAssets.filter(a => a.isLiquid).reduce((sum, a) => sum + Number(a.currentValue), 0);
 
-  // Monthly income/expenses from transactions this month
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const monthTxns = recentTxns.filter(t => t.date >= monthStart);
+  // Monthly income/expenses from ALL transactions this month
   const monthlyIncome = monthTxns.filter(t => t.type === "income").reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
   const monthlyExpenses = monthTxns.filter(t => t.type === "expense").reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
   const savings = monthlyIncome - monthlyExpenses;
@@ -61,13 +65,13 @@ export async function GET(request: NextRequest) {
     ? efCurrent / Number(ef.monthlyEssentialExpenses)
     : 0;
 
-  // Net worth history from snapshots
-  const history = monthlySnapshots.reverse().map(s => ({
+  // Net worth history from snapshots (use spread to avoid mutating original array)
+  const history = [...monthlySnapshots].reverse().map(s => ({
     month: new Date(s.snapshotDate).toLocaleDateString("en-IN", { month: "short" }),
     value: Number(s.netWorth),
   }));
 
-  // Previous month net worth for change calculation
+  // Previous month net worth for change calculation (original array is DESC, so [0]=newest, [1]=previous)
   const prevSnapshot = monthlySnapshots.length > 1 ? monthlySnapshots[1] : null;
   const previousNetWorth = prevSnapshot ? Number(prevSnapshot.netWorth) : netWorth;
   const netWorthChange = netWorth - previousNetWorth;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { formatIndianNumber, parseIndianNumber } from "@/lib/utils";
 
 interface CurrencyInputProps {
@@ -79,13 +79,22 @@ export function CurrencyInput({
     }
   }, [displayValue]);
 
-  // Sync external value changes (e.g., form reset)
-  const numValue = Number(value);
-  const currentParsed = parseIndianNumber(displayValue);
-  if (!isFocused && numValue !== currentParsed && numValue > 0) {
-    // Will be picked up on next render
-    setTimeout(() => setDisplayValue(formatIndianNumber(numValue)), 0);
-  }
+  // Sync external value changes (e.g., form reset, edit mode init)
+  const prevValueRef = useRef(value);
+  useEffect(() => {
+    const numValue = Number(value);
+    const prevNum = Number(prevValueRef.current);
+    prevValueRef.current = value;
+
+    // Only sync if the external value actually changed and we're not focused
+    if (!isFocused && numValue !== prevNum) {
+      if (numValue > 0) {
+        setDisplayValue(formatIndianNumber(numValue));
+      } else {
+        setDisplayValue("");
+      }
+    }
+  }, [value, isFocused]);
 
   return (
     <input
