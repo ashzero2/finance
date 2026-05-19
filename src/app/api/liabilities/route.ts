@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { liabilities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { generateInsights } from "@/lib/insights";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -31,6 +32,9 @@ export async function POST(request: NextRequest) {
     institution: body.institution || null,
     notes: body.notes || null,
   }).returning();
+
+  // Auto-regenerate insights after adding a liability
+  generateInsights(session.user.id).catch(() => {});
 
   return NextResponse.json(liability, { status: 201 });
 }

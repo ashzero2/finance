@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { liabilities } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { generateInsights } from "@/lib/insights";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -30,6 +31,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     .returning();
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Auto-regenerate insights after liability update
+  generateInsights(session.user.id).catch(() => {});
+
   return NextResponse.json(updated);
 }
 
