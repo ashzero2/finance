@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,18 +24,7 @@ export default function LoginPage() {
       setError(error.message || "Invalid credentials");
       setLoading(false);
     } else {
-      // Check onboarding status before redirecting
-      try {
-        const res = await fetch("/api/onboarding");
-        const data = await res.json();
-        if (data.onboardingCompleted) {
-          router.push("/dashboard");
-        } else {
-          router.push("/onboarding");
-        }
-      } catch {
-        router.push("/dashboard");
-      }
+      window.location.href = "/dashboard";
     }
   };
 

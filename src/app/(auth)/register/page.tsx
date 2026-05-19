@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { signUp } from "@/lib/auth-client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -11,7 +10,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +26,7 @@ export default function RegisterPage() {
       setError(error.message || "Registration failed");
       setLoading(false);
     } else {
-      router.push("/onboarding");
+      window.location.href = "/dashboard";
     }
   };
 

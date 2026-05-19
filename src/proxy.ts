@@ -6,7 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
  * This avoids importing the DB/auth module in the proxy worker.
  */
 export function proxy(request: NextRequest) {
-  const sessionCookie = request.cookies.get("better-auth.session_token");
+  // better-auth uses __Secure- prefix in production (HTTPS)
+  const sessionCookie =
+    request.cookies.get("__Secure-better-auth.session_token") ??
+    request.cookies.get("better-auth.session_token");
   const hasSession = !!sessionCookie?.value;
   const { pathname } = request.nextUrl;
 
