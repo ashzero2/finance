@@ -18,6 +18,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Root page — redirect based on auth status
+  if (pathname === "/") {
+    if (hasSession) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   // Protected routes — redirect to login if not authenticated
   if (!hasSession) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -28,6 +36,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/dashboard",
     "/dashboard/:path*",
     "/portfolio",

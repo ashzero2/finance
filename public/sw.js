@@ -1,17 +1,11 @@
-const CACHE_NAME = "finance-v1";
+const CACHE_NAME = "finance-v2";
 const STATIC_ASSETS = [
-  "/",
-  "/dashboard",
-  "/portfolio",
-  "/cashflow",
-  "/goals",
-  "/insights",
-  "/calendar",
-  "/settings",
   "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
 ];
 
-// Install — cache app shell
+// Install — cache only truly static assets (not auth-gated pages)
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -68,7 +62,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets & pages: cache-first
+  // Page navigations: network-first (pages are auth-gated, don't cache redirects)
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Static assets (JS/CSS/images/fonts): cache-first with revalidation
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) {
