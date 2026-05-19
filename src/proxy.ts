@@ -59,7 +59,7 @@ function getClientIP(request: NextRequest): string {
  * Handles auth redirects, security headers, and rate limiting.
  * Full session validation happens in API routes via better-auth.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // better-auth uses __Secure- prefix in production (HTTPS)
   const sessionCookie =
     request.cookies.get("__Secure-better-auth.session_token") ??
@@ -72,6 +72,13 @@ export function proxy(request: NextRequest) {
     if (hasSession) {
       return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
+    // Block registration if ALLOWED_EMAILS is set and registration is restricted
+    if (pathname === "/register") {
+      const allowedEmails = process.env.ALLOWED_EMAILS;
+      if (allowedEmails === "DISABLED") {
+        return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
+      }
+    }
     return addSecurityHeaders(NextResponse.next());
   }
 
@@ -81,6 +88,35 @@ export function proxy(request: NextRequest) {
       return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
     return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
+  }
+
+  // ── Registration restriction on auth API ──
+  if (pathname.startsWith("/api/auth/") && request.method === "POST") {
+    // Check if this is a sign-up request and enforce allowed emails
+    const allowedEmails = process.env.ALLOWED_EMAILS;
+    if (allowedEmails && allowedEmails !== "DISABLED") {
+      // Clone the request to read body without consuming it
+      try {
+        const cloned = request.clone();
+        const body = await cloned.json();
+        if (body?.email && pathname.includes("sign-up")) {
+          const allowed = allowedEmails.split(",").map(e => e.trim().toLowerCase());
+          if (!allowed.includes(String(body.email).toLowerCase())) {
+            return addSecurityHeaders(
+              NextResponse.json({ error: "Registration is restricted. Contact the admin." }, { status: 403 })
+            );
+          }
+        }
+      } catch {
+        // If we can't parse the body, let it through (auth handler will validate)
+      }
+    } else if (allowedEmails === "DISABLED") {
+      if (pathname.includes("sign-up")) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: "Registration is currently disabled." }, { status: 403 })
+        );
+      }
+    }
   }
 
   // ── Rate limiting for auth endpoints ──
