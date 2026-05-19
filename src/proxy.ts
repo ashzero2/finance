@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Lightweight proxy — checks for session cookie only.
- * Full session validation happens in server components / API routes.
- * This avoids importing the DB/auth module in the proxy worker.
+ * Next.js 16 Proxy (replaces middleware.ts).
+ * Handles auth redirects and security headers.
+ * Full session validation happens in API routes via better-auth.
  */
 export function proxy(request: NextRequest) {
   // better-auth uses __Secure- prefix in production (HTTPS)
@@ -13,28 +13,54 @@ export function proxy(request: NextRequest) {
   const hasSession = !!sessionCookie?.value;
   const { pathname } = request.nextUrl;
 
-  // Auth pages — redirect to dashboard if already logged in
+  // ── Auth pages ──
   if (pathname === "/login" || pathname === "/register") {
     if (hasSession) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
   }
 
-  // Root page — redirect based on auth status
+  // ── Root page ──
   if (pathname === "/") {
     if (hasSession) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
   }
 
-  // Protected routes — redirect to login if not authenticated
+  // ── Protected API routes (not auth endpoints) ──
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/auth/")) {
+    if (!hasSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return addSecurityHeaders(NextResponse.next());
+  }
+
+  // ── Protected pages ──
   if (!hasSession) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
   }
 
-  return NextResponse.next();
+  return addSecurityHeaders(NextResponse.next());
+}
+
+/**
+ * Add security headers to all responses.
+ */
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  // Prevent clickjacking
+  response.headers.set("X-Frame-Options", "DENY");
+  // Prevent MIME type sniffing
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  // XSS protection (legacy browsers)
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  // Referrer policy
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Permissions policy
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
+  return response;
 }
 
 export const config = {
@@ -58,5 +84,6 @@ export const config = {
     "/onboarding/:path*",
     "/login",
     "/register",
+    "/api/:path*",
   ],
 };
