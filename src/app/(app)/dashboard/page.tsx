@@ -10,6 +10,8 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { FadeIn } from "@/components/ui/fade-in";
 import { SectionHeader } from "@/components/ui/section-header";
 import { formatINR, formatDateShort, getGreeting, getMonthsRemaining } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface DashboardData {
   user: { name: string };
@@ -41,6 +43,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [snapshotting, setSnapshotting] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -77,13 +81,41 @@ export default function DashboardPage() {
     <div>
       {/* Greeting */}
       <FadeIn delay={0}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>
-            {getGreeting()}, {data.user.name || "there"}
-          </h1>
-          <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
-            {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>
+              {getGreeting()}, {data.user.name || "there"}
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+              {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
+          {hasData && (
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                setSnapshotting(true);
+                try {
+                  const res = await fetch("/api/snapshots", { method: "POST" });
+                  if (res.ok) {
+                    showToast("Snapshot captured! Check Insights for trends.", "success");
+                    // Refresh dashboard data to include new snapshot in sparkline
+                    const r = await fetch("/api/dashboard");
+                    if (r.ok) setData(await r.json());
+                  } else {
+                    showToast("Failed to take snapshot", "error");
+                  }
+                } catch {
+                  showToast("Failed to take snapshot", "error");
+                }
+                setSnapshotting(false);
+              }}
+              disabled={snapshotting}
+            >
+              <Icon name="camera" size={14} color="var(--text-secondary)" />
+              {snapshotting ? "Capturing..." : "Snapshot"}
+            </Button>
+          )}
         </div>
       </FadeIn>
 
