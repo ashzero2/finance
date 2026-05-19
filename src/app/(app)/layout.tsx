@@ -21,11 +21,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Check onboarding status
-    fetch("/api/onboarding")
-      .then((r) => r.json())
-      .then((data) => {
-        const completed = data.onboardingCompleted ?? false;
+    // Check onboarding status and load theme
+    Promise.all([
+      fetch("/api/onboarding").then((r) => r.ok ? r.json() : { onboardingCompleted: false }),
+      fetch("/api/settings").then((r) => r.ok ? r.json() : null),
+    ])
+      .then(([onboardingData, settingsData]) => {
+        // Apply theme
+        if (settingsData?.theme) {
+          const theme = settingsData.theme;
+          if (theme === "system") {
+            const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+          } else {
+            document.documentElement.setAttribute("data-theme", theme);
+          }
+        }
+
+        const completed = onboardingData.onboardingCompleted ?? false;
         setOnboardingCompleted(completed);
         setOnboardingChecked(true);
 

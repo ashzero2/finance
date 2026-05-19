@@ -34,6 +34,18 @@ export default function SettingsPage() {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
     setSaving(true);
+
+    // Apply theme immediately
+    if (updates.theme) {
+      const theme = updates.theme;
+      if (theme === "system") {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+      } else {
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+    }
+
     try {
       await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
     } catch {}

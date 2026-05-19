@@ -46,6 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="dark"
       className={`${outfit.variable} ${jetbrainsMono.variable}`}
     >
       <body>
