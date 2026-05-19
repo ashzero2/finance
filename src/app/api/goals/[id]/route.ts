@@ -4,13 +4,15 @@ import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
+import { parseBody, updateGoalSchema } from "@/lib/validations";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, updateGoalSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
 
   const [updated] = await db.update(goals)
     .set({

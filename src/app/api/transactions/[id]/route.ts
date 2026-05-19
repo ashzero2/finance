@@ -3,13 +3,15 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { parseBody, updateTransactionSchema } from "@/lib/validations";
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, updateTransactionSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
 
   try {
     const [updated] = await db.update(transactions)

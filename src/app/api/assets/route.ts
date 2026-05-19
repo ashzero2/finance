@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { assets, assetSnapshots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
+import { parseBody, createAssetSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -17,15 +18,17 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, createAssetSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
+
   const [asset] = await db.insert(assets).values({
     userId: session.user.id,
     name: body.name,
     category: body.category,
     subCategory: body.subCategory || null,
-    currentValue: String(body.currentValue || 0),
-    isLiquid: body.isLiquid || false,
-    liquidityDays: body.liquidityDays || 0,
+    currentValue: String(body.currentValue),
+    isLiquid: body.isLiquid,
+    liquidityDays: body.liquidityDays,
     institution: body.institution || null,
     notes: body.notes || null,
   }).returning();

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { liabilities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
+import { parseBody, createLiabilitySchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -17,7 +18,9 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, createLiabilitySchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
+
   const [liability] = await db.insert(liabilities).values({
     userId: session.user.id,
     name: body.name,

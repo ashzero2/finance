@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { insights } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
+import { parseBody, insightActionSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -30,10 +31,10 @@ export async function PATCH(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-  const { id, action } = body;
+  const { data: body, error } = await parseBody(request, insightActionSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
 
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  const { id, action } = body;
 
   if (action === "dismiss") {
     await db.update(insights)

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { emergencyFund } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { parseBody, updateEmergencyFundSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -16,7 +17,9 @@ export async function PUT(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, updateEmergencyFundSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
+
   const existing = await db.select().from(emergencyFund).where(eq(emergencyFund.userId, session.user.id)).limit(1);
 
   if (existing.length > 0) {

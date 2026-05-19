@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { categories } from "@/lib/db/schema";
 import { eq, or, isNull, and } from "drizzle-orm";
+import { parseBody, createCategorySchema, updateCategorySchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -19,24 +20,17 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-
-  if (!body.name || !body.type) {
-    return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
-  }
-
-  if (body.type !== "income" && body.type !== "expense") {
-    return NextResponse.json({ error: "Type must be 'income' or 'expense'" }, { status: 400 });
-  }
+  const { data: body, error } = await parseBody(request, createCategorySchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
 
   const [category] = await db.insert(categories).values({
     userId: session.user.id,
-    name: String(body.name).slice(0, 50),
+    name: body.name,
     type: body.type,
-    icon: body.icon || "circle",
-    color: body.color || "#8B8B96",
-    isEssential: body.isEssential || false,
-    sortOrder: body.sortOrder || 0,
+    icon: body.icon,
+    color: body.color,
+    isEssential: body.isEssential,
+    sortOrder: body.sortOrder,
   }).returning();
 
   return NextResponse.json(category, { status: 201 });
@@ -46,20 +40,17 @@ export async function PUT(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-
-  if (!body.id) {
-    return NextResponse.json({ error: "Category ID is required" }, { status: 400 });
-  }
+  const { data: body, error } = await parseBody(request, updateCategorySchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
 
   // Only allow editing user's own categories (not system defaults)
   const [updated] = await db.update(categories)
     .set({
-      name: body.name ? String(body.name).slice(0, 50) : undefined,
-      icon: body.icon ?? undefined,
-      color: body.color ?? undefined,
-      isEssential: body.isEssential ?? undefined,
-      sortOrder: body.sortOrder ?? undefined,
+      name: body.name,
+      icon: body.icon,
+      color: body.color,
+      isEssential: body.isEssential,
+      sortOrder: body.sortOrder,
     })
     .where(and(eq(categories.id, body.id), eq(categories.userId, session.user.id)))
     .returning();

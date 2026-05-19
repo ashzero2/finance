@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
+import { parseBody, createTransactionSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -41,7 +42,9 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, createTransactionSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
+
   const [txn] = await db.insert(transactions).values({
     userId: session.user.id,
     type: body.type,
@@ -49,8 +52,8 @@ export async function POST(request: NextRequest) {
     categoryId: body.categoryId || null,
     description: body.description || null,
     date: body.date || new Date().toISOString().split("T")[0],
-    isRecurring: body.isRecurring || false,
-    tags: body.tags || [],
+    isRecurring: body.isRecurring,
+    tags: body.tags,
   }).returning();
 
   // Auto-regenerate insights after adding a transaction

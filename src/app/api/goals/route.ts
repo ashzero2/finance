@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { goals } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { parseBody, createGoalSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -16,7 +17,9 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, createGoalSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
+
   const [goal] = await db.insert(goals).values({
     userId: session.user.id,
     name: body.name,
