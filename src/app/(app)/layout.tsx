@@ -28,9 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       fetch("/api/settings").then((r) => r.ok ? r.json() : null),
     ])
       .then(([onboardingData, settingsData]) => {
-        // Apply theme
+        // Apply theme + sync to localStorage for instant loading on next visit
         if (settingsData?.theme) {
           const theme = settingsData.theme;
+          try { localStorage.setItem("finance-theme", theme); } catch {}
           if (theme === "system") {
             const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
             document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");

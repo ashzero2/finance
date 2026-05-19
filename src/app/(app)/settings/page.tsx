@@ -35,9 +35,10 @@ export default function SettingsPage() {
     setSettings(newSettings);
     setSaving(true);
 
-    // Apply theme immediately
+    // Apply theme immediately + persist to localStorage for instant loading
     if (updates.theme) {
       const theme = updates.theme;
+      localStorage.setItem("finance-theme", theme);
       if (theme === "system") {
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");

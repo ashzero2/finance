@@ -50,18 +50,32 @@ export default function RootLayout({
       className={`${outfit.variable} ${jetbrainsMono.variable}`}
     >
       <body>
-        {children}
+        {/* Blocking script to prevent theme flash — runs before React hydration */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function() {});
-                });
-              }
+              (function() {
+                try {
+                  var theme = localStorage.getItem('finance-theme');
+                  if (theme === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                  } else if (theme === 'system') {
+                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+                  }
+                  // 'dark' is already the default from the server-rendered HTML
+                } catch(e) {}
+
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function() {});
+                  });
+                }
+              })();
             `,
           }}
         />
+        {children}
       </body>
     </html>
   );
