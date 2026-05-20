@@ -14,8 +14,6 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type"); // income, expense, or null for all
   const month = searchParams.get("month"); // YYYY-MM format
 
-  let query = db.select().from(transactions).where(eq(transactions.userId, session.user.id));
-
   // Build conditions
   const conditions = [eq(transactions.userId, session.user.id)];
   if (type && (type === "income" || type === "expense")) {
