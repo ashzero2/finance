@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
-  // Check onboarding status whenever session loads or pathname changes
+  // Check onboarding + settings ONCE when session loads (not on every navigation)
   useEffect(() => {
     if (sessionLoading) return;
 
@@ -22,7 +22,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Check onboarding status and load theme
+    // Already checked — don't re-fetch on route changes
+    if (onboardingChecked) return;
+
     Promise.all([
       fetch("/api/onboarding").then((r) => r.ok ? r.json() : { onboardingCompleted: false }),
       fetch("/api/settings").then((r) => r.ok ? r.json() : null),
@@ -43,19 +45,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const completed = onboardingData.onboardingCompleted ?? false;
         setOnboardingCompleted(completed);
         setOnboardingChecked(true);
-
-        // Redirect logic
-        if (!completed && pathname !== "/onboarding") {
-          router.replace("/onboarding");
-        } else if (completed && pathname === "/onboarding") {
-          router.replace("/dashboard");
-        }
       })
       .catch(() => {
         setOnboardingCompleted(true);
         setOnboardingChecked(true);
       });
-  }, [session, sessionLoading, pathname, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, sessionLoading]);
+
+  // Handle onboarding redirects (runs on pathname change, but no API calls)
+  useEffect(() => {
+    if (!onboardingChecked || onboardingCompleted === null) return;
+    if (!onboardingCompleted && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+    } else if (onboardingCompleted && pathname === "/onboarding") {
+      router.replace("/dashboard");
+    }
+  }, [onboardingChecked, onboardingCompleted, pathname, router]);
 
   // Loading state — show branded spinner
   if (sessionLoading || !onboardingChecked) {
