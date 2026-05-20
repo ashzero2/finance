@@ -3,6 +3,7 @@ import { getAppSession } from "@/lib/get-session";
 import { db } from "@/lib/db";
 import { assets, liabilities, goals, emergencyFund, userSettings, financialSnapshots } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { parseBody, onboardingSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
   const session = await getAppSession(request);
@@ -16,7 +17,8 @@ export async function POST(request: NextRequest) {
   const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const { data: body, error } = await parseBody(request, onboardingSchema);
+  if (!body) return NextResponse.json({ error }, { status: 400 });
   const userId = session.user.id;
 
   // Idempotency guard — don't re-run if already completed
