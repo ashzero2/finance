@@ -83,9 +83,9 @@ The Better Auth session cookie is available on all paths including `/api/simple-
 | 2 | **No error boundaries** — any component crash kills the entire app with a white screen | App-wide |
 | 3 | **No confirmation dialog before delete operations** — accidental taps on mobile delete assets/transactions permanently | Portfolio, Cashflow pages |
 | 4 | **Transactions limited to 100 with no pagination** — users who log daily will lose visibility after ~3 months | `src/app/api/transactions/route.ts:34` |
-| 5 | **No loading skeletons** — most pages show "Loading..." text instead of skeleton placeholders | Dashboard, Portfolio, etc. |
-| 6 | **All styles are inline** — no hover/focus states visible, no keyboard focus indicators, poor a11y | All pages |
-| 7 | **No undo/undo-toast after destructive actions** — if you delete a goal, it's gone instantly | Goals, Portfolio |
+| 5 | **✅ FIXED — No loading skeletons** — replaced with shimmer skeleton placeholders on all pages | Dashboard, Portfolio, etc. |
+| 6 | **✅ FIXED — All styles are inline** — added global CSS hover/focus states, focus-visible outlines, input hover borders | All pages |
+| 7 | **✅ FIXED — No undo/undo-toast after destructive actions** — toast now shows Undo button for 5 seconds after delete | Goals, Portfolio, Cash Flow |
 
 ### Suggestions & Enhancements
 
