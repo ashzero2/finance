@@ -23,10 +23,15 @@ export async function PUT(request: NextRequest) {
   const existing = await db.select().from(userSettings).where(eq(userSettings.userId, session.user.id)).limit(1);
 
   if (existing.length > 0) {
-    const [updated] = await db.update(userSettings).set({
-      currency: body.currency, financialMonthStartDay: body.financialMonthStartDay,
-      weeklyReviewDay: body.weeklyReviewDay, theme: body.theme, updatedAt: new Date(),
-    }).where(eq(userSettings.userId, session.user.id)).returning();
+    // Filter out undefined values to avoid overwriting DB with NULL
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.currency !== undefined) updates.currency = body.currency;
+    if (body.financialMonthStartDay !== undefined) updates.financialMonthStartDay = body.financialMonthStartDay;
+    if (body.weeklyReviewDay !== undefined) updates.weeklyReviewDay = body.weeklyReviewDay;
+    if (body.theme !== undefined) updates.theme = body.theme;
+
+    const [updated] = await db.update(userSettings).set(updates)
+      .where(eq(userSettings.userId, session.user.id)).returning();
     return NextResponse.json(updated);
   } else {
     const [created] = await db.insert(userSettings).values({
