@@ -118,7 +118,7 @@ export default function DashboardPage() {
 
       {!hasData ? (
         <FadeIn delay={100}>
-          <Card hover={false} style={{ padding: "48px 24px", textAlign: "center" }}>
+          <Card hover={false} style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, color: "var(--text-secondary)" }}>
             <Icon name="bar-chart" size={48} color="var(--border)" style={{ marginBottom: 16 }} />
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "var(--text-primary)" }}>
               Welcome to Finance
