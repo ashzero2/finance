@@ -54,8 +54,9 @@ export async function DELETE() {
 }
 
 async function generateToken(password: string): Promise<string> {
+  const secret = process.env.BETTER_AUTH_SECRET || "default-secret";
   const encoder = new TextEncoder();
-  const data = encoder.encode(password + ":simple-auth-salt-finance");
+  const data = encoder.encode(password + ":" + secret + ":simple-auth-finance");
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");

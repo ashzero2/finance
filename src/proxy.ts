@@ -57,6 +57,20 @@ function getClientIP(request: NextRequest): string {
 const isSimpleAuth = process.env.AUTH_MODE === "simple";
 const simplePassword = process.env.SIMPLE_AUTH_PASSWORD || "";
 
+// Pre-compute the expected token hash at startup (only in simple mode with password)
+let expectedTokenHash: string | null = null;
+if (isSimpleAuth && simplePassword) {
+  // Sync computation at module load — hash the password + salt + secret
+  const secret = process.env.BETTER_AUTH_SECRET || "default-secret";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(simplePassword + ":" + secret + ":simple-auth-finance");
+  crypto.subtle.digest("SHA-256", data).then((buf) => {
+    expectedTokenHash = Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  });
+}
+
 /**
  * Next.js 16 Proxy (replaces middleware.ts).
  * Handles auth redirects, security headers, and rate limiting.
@@ -68,7 +82,8 @@ export async function proxy(request: NextRequest) {
 
   // ── Simple auth mode ──
   if (isSimpleAuth) {
-    const hasSimpleToken = !!request.cookies.get("simple-auth-token")?.value;
+    const tokenValue = request.cookies.get("simple-auth-token")?.value;
+    const hasSimpleToken = !!(tokenValue && expectedTokenHash && tokenValue === expectedTokenHash);
     const needsPassword = !!simplePassword;
 
     // Allow the simple-auth API endpoint through without auth
