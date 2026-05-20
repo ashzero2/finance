@@ -366,15 +366,35 @@ export default function PortfolioPage() {
       {deleteConfirm && (
         <ConfirmDialog
           title={`Delete ${deleteConfirm.name}?`}
-          message="This action cannot be undone. All associated data will be permanently removed."
+          message="You can undo this action for a few seconds after deleting."
           onConfirm={async () => {
-            const url = deleteConfirm.type === "asset"
-              ? `/api/assets/${deleteConfirm.id}`
-              : `/api/liabilities/${deleteConfirm.id}`;
+            const { type, id, name } = deleteConfirm;
+            const url = type === "asset" ? `/api/assets/${id}` : `/api/liabilities/${id}`;
+            // Capture item data before deleting (for undo)
+            const itemToRestore = type === "asset"
+              ? assets.find(a => a.id === id)
+              : liabs.find(l => l.id === id);
             try {
               const res = await fetch(url, { method: "DELETE" });
               if (res.ok) {
-                showToast(`${deleteConfirm.name} deleted`, "success");
+                fetchData();
+                showToast(`${name} deleted`, "info", {
+                  onUndo: async () => {
+                    if (!itemToRestore) return;
+                    try {
+                      const endpoint = type === "asset" ? "/api/assets" : "/api/liabilities";
+                      await fetch(endpoint, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(itemToRestore),
+                      });
+                      fetchData();
+                      showToast(`${name} restored`, "success");
+                    } catch {
+                      showToast("Failed to restore", "error");
+                    }
+                  },
+                });
               } else {
                 showToast("Failed to delete", "error");
               }
@@ -384,7 +404,6 @@ export default function PortfolioPage() {
             setDeleteConfirm(null);
             setEditingAsset(null);
             setEditingLiab(null);
-            fetchData();
           }}
           onCancel={() => setDeleteConfirm(null)}
         />

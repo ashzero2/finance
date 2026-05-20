@@ -158,15 +158,40 @@ export default function CashFlowPage() {
       {deleteConfirm && (
         <ConfirmDialog
           title="Delete transaction?"
-          message={`Are you sure you want to delete "${deleteConfirm.name}"? This cannot be undone.`}
+          message={`Delete "${deleteConfirm.name}"? You can undo for a few seconds.`}
           onConfirm={async () => {
+            const { id, name } = deleteConfirm;
+            const txToRestore = txns.find(t => t.id === id);
             try {
-              const res = await fetch(`/api/transactions/${deleteConfirm.id}`, { method: "DELETE" });
-              if (res.ok) showToast("Transaction deleted", "success");
-              else showToast("Failed to delete", "error");
+              const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+              if (res.ok) {
+                fetchData();
+                showToast("Transaction deleted", "info", {
+                  onUndo: async () => {
+                    if (!txToRestore) return;
+                    try {
+                      await fetch("/api/transactions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          type: txToRestore.type,
+                          amount: Number(txToRestore.amount),
+                          categoryId: txToRestore.categoryId,
+                          description: txToRestore.description,
+                          date: txToRestore.date,
+                          isRecurring: txToRestore.isRecurring,
+                        }),
+                      });
+                      fetchData();
+                      showToast(`${name} restored`, "success");
+                    } catch {
+                      showToast("Failed to restore", "error");
+                    }
+                  },
+                });
+              } else showToast("Failed to delete", "error");
             } catch { showToast("Failed to delete", "error"); }
             setDeleteConfirm(null);
-            fetchData();
           }}
           onCancel={() => setDeleteConfirm(null)}
         />

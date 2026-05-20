@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useCallback, useEffect, createContext, useContext } from "react";
+import { useState, useCallback, useRef, createContext, useContext } from "react";
 
 interface Toast {
   id: string;
   message: string;
   type: "success" | "error" | "info";
+  onUndo?: () => void;
+  undone?: boolean;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: "success" | "error" | "info") => void;
+  showToast: (message: string, type?: "success" | "error" | "info", options?: { onUndo?: () => void }) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({ showToast: () => {} });
@@ -20,13 +22,41 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    const id = crypto.randomUUID();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+  const showToast = useCallback(
+    (message: string, type: "success" | "error" | "info" = "success", options?: { onUndo?: () => void }) => {
+      const id = crypto.randomUUID();
+      setToasts((prev) => [...prev, { id, message, type, onUndo: options?.onUndo }]);
+
+      const duration = options?.onUndo ? 5000 : 3000; // longer for undo toasts
+      const timer = setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        timersRef.current.delete(id);
+      }, duration);
+      timersRef.current.set(id, timer);
+    },
+    []
+  );
+
+  const handleUndo = useCallback((toast: Toast) => {
+    // Mark as undone and remove
+    setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+    const timer = timersRef.current.get(toast.id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(toast.id);
+    }
+    toast.onUndo?.();
+  }, []);
+
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
   }, []);
 
   return (
@@ -67,10 +97,50 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
                   animation: "slideUp 0.2s ease",
                   pointerEvents: "auto",
-                  maxWidth: 320,
+                  maxWidth: 360,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
                 }}
               >
-                {toast.message}
+                <span style={{ flex: 1 }}>{toast.message}</span>
+                {toast.onUndo && (
+                  <button
+                    onClick={() => handleUndo(toast)}
+                    style={{
+                      background: "none",
+                      border: "1px solid currentColor",
+                      borderRadius: "var(--radius-sm)",
+                      padding: "4px 10px",
+                      color: "var(--accent)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-sans)",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Undo
+                  </button>
+                )}
+                {!toast.onUndo && (
+                  <button
+                    onClick={() => dismiss(toast.id)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-tertiary)",
+                      cursor: "pointer",
+                      padding: 2,
+                      fontSize: 14,
+                      lineHeight: 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             );
           })}

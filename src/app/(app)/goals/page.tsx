@@ -212,15 +212,43 @@ export default function GoalsPage() {
       {deleteConfirm && (
         <ConfirmDialog
           title={`Delete ${deleteConfirm.name}?`}
-          message="This goal and all its progress data will be permanently removed."
+          message="You can undo this action for a few seconds after deleting."
           onConfirm={async () => {
+            const { id, name } = deleteConfirm;
+            const goalToRestore = goalsList.find(g => g.id === id);
             try {
-              const res = await fetch(`/api/goals/${deleteConfirm.id}`, { method: "DELETE" });
-              if (res.ok) showToast(`${deleteConfirm.name} deleted`, "success");
-              else showToast("Failed to delete", "error");
+              const res = await fetch(`/api/goals/${id}`, { method: "DELETE" });
+              if (res.ok) {
+                fetchData();
+                showToast(`${name} deleted`, "info", {
+                  onUndo: async () => {
+                    if (!goalToRestore) return;
+                    try {
+                      await fetch("/api/goals", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          name: goalToRestore.name,
+                          targetAmount: Number(goalToRestore.targetAmount),
+                          currentAmount: Number(goalToRestore.currentAmount),
+                          targetDate: goalToRestore.targetDate,
+                          monthlyContribution: goalToRestore.monthlyContribution ? Number(goalToRestore.monthlyContribution) : null,
+                          color: goalToRestore.color,
+                          icon: goalToRestore.icon,
+                          priority: goalToRestore.priority,
+                          category: goalToRestore.category,
+                        }),
+                      });
+                      fetchData();
+                      showToast(`${name} restored`, "success");
+                    } catch {
+                      showToast("Failed to restore", "error");
+                    }
+                  },
+                });
+              } else showToast("Failed to delete", "error");
             } catch { showToast("Failed to delete", "error"); }
             setDeleteConfirm(null);
-            fetchData();
           }}
           onCancel={() => setDeleteConfirm(null)}
         />
