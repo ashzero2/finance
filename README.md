@@ -77,7 +77,9 @@ Built with **Next.js 16**, **TypeScript**, **PostgreSQL**, **Drizzle ORM**, and 
 - **Standalone display** — runs without browser chrome
 
 ### 🔐 Authentication
-- **Better Auth** with email/password authentication
+- **Dual auth mode** — choose via `AUTH_MODE` env variable:
+  - **`better-auth`** (default) — Full Better Auth with email/password login & registration
+  - **`simple`** — Zero-login mode; a default user is auto-created on first boot. Perfect for personal/family use.
 - **Session-based** security — all API routes are user-scoped
 - **Onboarding flow** for new users
 
@@ -201,8 +203,36 @@ BETTER_AUTH_URL="http://localhost:3000"
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | ✅ | Secret for session signing. Generate with `openssl rand -hex 32` |
 | `BETTER_AUTH_URL` | ✅ | Full URL where the app is hosted (e.g., `https://finance.example.com`) |
+| `AUTH_MODE` | ❌ | `"better-auth"` (default) or `"simple"` — see Auth Modes below |
+| `NEXT_PUBLIC_AUTH_MODE` | ❌ | Must match `AUTH_MODE` (needed for client-side) |
+| `DEFAULT_USER_NAME` | ❌ | Display name for simple-auth default user (default: `"User"`) |
+| `DEFAULT_USER_EMAIL` | ❌ | Email for simple-auth default user (default: `"user@localhost"`) |
+| `SIMPLE_AUTH_PASSWORD` | ❌ | Password gate for simple mode. If set, users must enter this password once before accessing the app. Cookie lasts 30 days. |
 
-### 4. Set Up the Database
+### 4. Choose Auth Mode
+
+**For personal / family use (no login):**
+```env
+AUTH_MODE=simple
+NEXT_PUBLIC_AUTH_MODE=simple
+# Optionally customize:
+# DEFAULT_USER_NAME=Rahul
+# DEFAULT_USER_EMAIL=rahul@home
+```
+A default user is auto-created on first boot. Add a password gate to protect your instance:
+```env
+SIMPLE_AUTH_PASSWORD=your-secret-password
+```
+Users will see a simple password prompt on first visit. The session cookie lasts 30 days. If you omit `SIMPLE_AUTH_PASSWORD`, there's no login at all.
+
+**For multi-user / shared hosting:**
+```env
+AUTH_MODE=better-auth
+NEXT_PUBLIC_AUTH_MODE=better-auth
+```
+This is the default. Users sign up and log in with email/password via Better Auth.
+
+### 5. Set Up the Database
 
 #### Option A: Using Drizzle Push (Development / Quick Setup)
 
@@ -236,13 +266,13 @@ docker run -d \
 
 Then set `DATABASE_URL="postgresql://finance:your_password@localhost:5432/finance"`.
 
-### 5. (Optional) Seed Sample Data
+### 6. (Optional) Seed Sample Data
 
 ```bash
 pnpm db:seed
 ```
 
-### 6. Run the App
+### 7. Run the App
 
 #### Development
 

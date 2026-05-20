@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAppSession } from "@/lib/get-session";
 import { db } from "@/lib/db";
 import { liabilities } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -7,7 +7,7 @@ import { generateInsights } from "@/lib/insights";
 import { parseBody, createLiabilitySchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userLiabilities = await db.select().from(liabilities).where(eq(liabilities.userId, session.user.id));
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: body, error } = await parseBody(request, createLiabilitySchema);

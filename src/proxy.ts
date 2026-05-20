@@ -54,18 +54,82 @@ function getClientIP(request: NextRequest): string {
     || "unknown";
 }
 
+const isSimpleAuth = process.env.AUTH_MODE === "simple";
+const simplePassword = process.env.SIMPLE_AUTH_PASSWORD || "";
+
 /**
  * Next.js 16 Proxy (replaces middleware.ts).
  * Handles auth redirects, security headers, and rate limiting.
  * Full session validation happens in API routes via better-auth.
+ * In simple auth mode, all auth checks are bypassed.
  */
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── Simple auth mode ──
+  if (isSimpleAuth) {
+    const hasSimpleToken = !!request.cookies.get("simple-auth-token")?.value;
+    const needsPassword = !!simplePassword;
+
+    // Allow the simple-auth API endpoint through without auth
+    if (pathname === "/api/simple-auth") {
+      return addSecurityHeaders(NextResponse.next());
+    }
+
+    // If a password is configured, gate access behind it
+    if (needsPassword && !hasSimpleToken) {
+      // Let /login through (that's where the password form is)
+      if (pathname === "/login") {
+        return addSecurityHeaders(NextResponse.next());
+      }
+      // Redirect pages to /login
+      if (!pathname.startsWith("/api/")) {
+        return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));
+      }
+      // Block API requests
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Authenticated (or no password set) — auth pages redirect to dashboard
+    if (pathname === "/login" || pathname === "/register") {
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    }
+    // Root redirects to dashboard
+    if (pathname === "/") {
+      return addSecurityHeaders(NextResponse.redirect(new URL("/dashboard", request.url)));
+    }
+    // All other routes pass through (rate limiting still applies)
+    if (pathname.startsWith("/api/")) {
+      const ip = getClientIP(request);
+      const isExpensive = pathname === "/api/snapshots" || pathname === "/api/insights";
+      if (isExpensive && request.method === "POST") {
+        const { allowed, resetIn } = checkRateLimit(`expensive:${ip}`, RATE_LIMITS.expensive);
+        if (!allowed) {
+          const res = NextResponse.json(
+            { error: "Rate limit exceeded. Please wait before trying again." },
+            { status: 429 }
+          );
+          res.headers.set("Retry-After", String(Math.ceil(resetIn / 1000)));
+          return addSecurityHeaders(res);
+        }
+      }
+      const { allowed } = checkRateLimit(`api:${ip}`, RATE_LIMITS.api);
+      if (!allowed) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: "Too many requests" }, { status: 429 })
+        );
+      }
+      return addSecurityHeaders(NextResponse.next());
+    }
+    return addSecurityHeaders(NextResponse.next());
+  }
+
+  // ── Better Auth mode ──
   // better-auth uses __Secure- prefix in production (HTTPS)
   const sessionCookie =
     request.cookies.get("__Secure-better-auth.session_token") ??
     request.cookies.get("better-auth.session_token");
   const hasSession = !!sessionCookie?.value;
-  const { pathname } = request.nextUrl;
 
   // ── Auth pages ──
   if (pathname === "/login" || pathname === "/register") {

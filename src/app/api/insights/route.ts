@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAppSession } from "@/lib/get-session";
 import { db } from "@/lib/db";
 import { insights } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -7,7 +7,7 @@ import { generateInsights } from "@/lib/insights";
 import { parseBody, insightActionSchema } from "@/lib/validations";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userInsights = await db.select().from(insights)
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
 // POST triggers insight regeneration
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const generated = await generateInsights(session.user.id);
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH to dismiss an insight
 export async function PATCH(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: body, error } = await parseBody(request, insightActionSchema);

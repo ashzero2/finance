@@ -23,4 +23,14 @@ export async function register() {
       console.error("[migrate] migration error:", err);
     }
   }
+
+  // In simple auth mode, ensure the default user exists
+  if (process.env.AUTH_MODE === "simple") {
+    try {
+      const { ensureDefaultUser } = await import("./lib/simple-auth");
+      await ensureDefaultUser();
+    } catch (err) {
+      console.error("[simple-auth] failed to create default user:", err);
+    }
+  }
 }

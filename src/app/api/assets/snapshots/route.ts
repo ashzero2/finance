@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAppSession } from "@/lib/get-session";
 import { db } from "@/lib/db";
 import { assets, assetSnapshots } from "@/lib/db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAppSession(request);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Get all user's asset IDs

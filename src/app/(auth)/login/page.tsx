@@ -4,7 +4,182 @@ import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
 
+const authMode = process.env.NEXT_PUBLIC_AUTH_MODE || "better-auth";
+
 export default function LoginPage() {
+  if (authMode === "simple") {
+    return <SimpleLoginForm />;
+  }
+  return <BetterAuthLoginForm />;
+}
+
+/** Simple password-only form for AUTH_MODE=simple */
+function SimpleLoginForm() {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/simple-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Wrong password");
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = "/dashboard";
+    } catch {
+      setError("Something went wrong");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ width: "100%", maxWidth: 400 }}>
+      {/* Logo */}
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "var(--radius-sm)",
+            background:
+              "linear-gradient(135deg, rgba(201,168,76,0.19), rgba(201,168,76,0.06))",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid rgba(201,168,76,0.13)",
+            marginBottom: 16,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              color: "var(--accent)",
+            }}
+          >
+            F
+          </span>
+        </div>
+        <h1
+          style={{
+            fontSize: 22,
+            fontWeight: 600,
+            color: "var(--text-primary)",
+            marginBottom: 6,
+          }}
+        >
+          Welcome
+        </h1>
+        <p style={{ fontSize: 14, color: "var(--text-tertiary)" }}>
+          Enter your password to continue
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "var(--radius-lg)",
+            padding: 24,
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          {error && (
+            <div
+              style={{
+                padding: "10px 14px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--negative-dim)",
+                color: "var(--negative)",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="password"
+              style={{
+                display: "block",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--text-secondary)",
+                marginBottom: 6,
+              }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              autoFocus
+              style={{
+                width: "100%",
+                height: 40,
+                padding: "0 12px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                background: "var(--bg-elevated)",
+                color: "var(--text-primary)",
+                fontSize: 14,
+                outline: "none",
+                fontFamily: "var(--font-sans)",
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              height: 42,
+              borderRadius: "var(--radius-sm)",
+              border: "none",
+              background: "var(--accent)",
+              color: "var(--bg-root)",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+              fontFamily: "var(--font-sans)",
+              transition: "opacity 0.15s",
+            }}
+          >
+            {loading ? "Unlocking..." : "Unlock"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** Full email/password form for AUTH_MODE=better-auth */
+function BetterAuthLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

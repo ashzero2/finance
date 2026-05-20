@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession } from "@/lib/auth-client";
+import { useAppSession } from "@/lib/use-session";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending: sessionLoading } = useSession();
+  const { data: session, isPending: sessionLoading } = useAppSession();
   const router = useRouter();
   const pathname = usePathname();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
