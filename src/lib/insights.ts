@@ -20,11 +20,19 @@ interface NewInsight {
 
 /**
  * Generate insights for a user based on their current financial data.
- * Deletes previous auto-generated insights and creates fresh ones.
+ * Preserves dismissed/read insights and only replaces active ones.
  */
 export async function generateInsights(userId: string): Promise<number> {
-  // Clear old insights
-  await db.delete(insights).where(eq(insights.userId, userId));
+  // Only clear non-dismissed, non-read insights (preserve user's dismissed/read state)
+  await db
+    .delete(insights)
+    .where(
+      and(
+        eq(insights.userId, userId),
+        eq(insights.isDismissed, false),
+        eq(insights.isRead, false)
+      )
+    );
 
   // Fetch all data in parallel
   const [userAssets, userLiabilities, userGoals, userEf, recentTxns] =
