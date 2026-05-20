@@ -1,128 +1,122 @@
 # Finance App — Security & UX Audit
 
-## Security Issues
+**Date:** 20 May 2026
+
+---
+
+## SECURITY ISSUES
 
 ### Critical
 
-**1. Middleware/Proxy is completely inactive**
-`src/proxy.ts` defines auth redirect logic with a `config.matcher`, but there is **no `middleware.ts` file** in the project. This means:
-- Protected routes (`/dashboard`, `/portfolio`, etc.) are accessible to unauthenticated users at the server level
-- The client-side redirect in `(app)/layout.tsx` only kicks in after the page renders
-- Direct API access from tools like `curl` is protected (auth checks in each route), but the HTML/JS is served regardless
+**1. ✅ FIXED — Simple Auth Token Not Validated — Cookie Bypass**  
+`src/proxy.ts:93` — The proxy only checks if the cookie *exists*, not if its *value* is correct:
+```typescript
+const hasSimpleToken = !!request.cookies.get("simple-auth-token")?.value;
+```
+Anyone can set `simple-auth-token=garbage` in their browser and bypass the password gate entirely. You need to verify the token matches `generateToken(password)`.
 
-**2. No input validation on API routes (Zod is unused)**
-You have `zod` as a dependency but never use it. Every API route blindly trusts `request.json()`:
-- `src/app/api/assets/route.ts` — `body.name`, `body.category` etc. taken directly without schema validation
-- `src/app/api/transactions/route.ts` — `body.type` could be anything
-- `src/app/api/settings/route.ts` — `body.theme` could be an invalid enum value causing DB errors
-- Malformed JSON body (`request.json()` throws) is unhandled in most routes — results in 500 errors with stack traces
+**2. ✅ FIXED — Onboarding Endpoint Skips Input Validation**  
+`src/app/api/onboarding/route.ts:28` — The POST handler uses raw `request.json()` without running it through the `onboardingSchema` Zod validator that already exists in `validations.ts`. This allows malformed/malicious data into your DB (e.g., excessively long strings, negative amounts that bypass `Math.abs`, or prototype pollution via object keys).
 
-**3. No rate limiting**
-No rate limiting on login, registration, or insight generation endpoints. Vulnerable to:
-- Brute force password attacks
-- DoS via repeated `POST /api/snapshots` or `POST /api/insights` (expensive DB operations)
-
-**4. Open registration — no access control**
-For an app meant for just you and your wife, anyone who finds the URL can register and create an account. There's no invite system, allowed-email list, or registration lock.
+**3. No CSRF Protection on Mutating Endpoints**  
+All POST/PUT/DELETE routes accept requests with only a session cookie. A malicious site could submit a form targeting your API (e.g., `POST /api/assets`) and the browser would attach the cookie automatically. Add `SameSite=Strict` for auth cookies, or require a custom header (e.g., `X-Requested-With`) that cross-origin forms can't set.
 
 ### High
 
-**5. Service Worker caches sensitive financial data**
-`public/sw.js` caches ALL successful API GET responses. After logout, cached financial data (net worth, transactions, goals) remains accessible in the browser cache.
+**4. IP Spoofing via `x-forwarded-for`**  
+`src/proxy.ts:56` — Rate limiting trusts the `x-forwarded-for` header directly. Without a trusted proxy list, attackers can rotate this header to bypass rate limits. If behind Caddy (your `Caddyfile.example`), only trust the last hop or use Caddy's `{remote_host}`.
 
-**6. No security headers**
-No `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, or `Strict-Transport-Security` headers configured. The app can be embedded in iframes (clickjacking risk).
+**5. ✅ FIXED — Missing Content-Security-Policy Header**  
+`src/proxy.ts:173` — Security headers include `X-Frame-Options`, `X-Content-Type-Options`, etc., but no `Content-Security-Policy`. This leaves the app vulnerable to XSS via injected scripts. Add at minimum:
+```
+default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com;
+```
 
-**7. No CSRF protection for mutations**
-POST/PUT/DELETE endpoints rely solely on session cookies. Better Auth's cookie-based auth is vulnerable to CSRF unless SameSite is `Strict` (it defaults to `Lax` which still allows top-level navigations).
+**6. In-Memory Rate Limiter Doesn't Survive Restarts or Scale**  
+`src/proxy.ts:7` — The `Map`-based rate limiter resets on every deployment/restart and doesn't work across multiple instances. For a personal app this is low-risk, but auth brute-force protection is effectively illusory in production.
+
+**7. ✅ FIXED — Fixed Salt in Token Generation**  
+`src/app/api/simple-auth/route.ts:43` — `generateToken` uses a hardcoded salt (`":simple-auth-salt-finance"`). If an attacker learns the password, the token is fully deterministic and never rotates. Add a server-side random secret (e.g., `BETTER_AUTH_SECRET`) to the hash input.
 
 ### Medium
 
-**8. `generateInsights()` deletes ALL insights destructively**
-`src/lib/insights.ts` — Line `await db.delete(insights).where(eq(insights.userId, userId))` wipes ALL insights including snapshot-comparison insights every time an asset/liability/transaction is modified.
+**8. No `path` Restriction on Better Auth Session Cookie**  
+The Better Auth session cookie is available on all paths including `/api/simple-auth`. If any path has XSS, the cookie is exposed.
 
-**9. No password strength enforcement server-side**
-Registration only has `minLength={8}` on the client. No server-side enforcement of password complexity.
+**9. `DATABASE_URL!` Non-Null Assertion**  
+`src/lib/db/index.ts:5` — If `DATABASE_URL` is missing, the app crashes with an unhelpful error. Add a startup check with a clear message.
 
----
-
-## Bugs
-
-**1. Dead code — unused query variable in transactions route**
-`src/app/api/transactions/route.ts` — `let query = db.select().from(transactions).where(...)` is declared but never used; a separate query is built below it.
-
-**2. Goal un-completion doesn't clear `completedAt`**
-`src/app/api/goals/[id]/route.ts` — When `body.isCompleted` is `false`, setting `completedAt: undefined` in Drizzle means "don't update this field," so the old completion timestamp persists. Should be `completedAt: body.isCompleted ? new Date() : null`.
-
-**3. Dashboard shows category IDs instead of names**
-`src/app/api/dashboard/route.ts` — The expense breakdown uses `t.categoryId` (a UUID) as the display key. The category names are never resolved, so the UI shows UUIDs like `"a3f2b1c4-..."` instead of "Food", "Transport", etc.
-
-**4. Onboarding/settings fetched on EVERY navigation**
-`src/app/(app)/layout.tsx` — The `useEffect` depends on `pathname`, causing 2 API calls (`/api/onboarding` + `/api/settings`) on every single route change within the app.
-
-**5. No error handling for malformed JSON body**
-If a request sends invalid JSON, `await request.json()` throws an unhandled exception → 500 error. Should be wrapped in try/catch across all routes.
-
-**6. `generateInsights` errors silently swallowed**
-Pattern `.catch(() => {})` used everywhere means you'll never know if insight generation is failing repeatedly.
+**10. Secrets Possibly Leaked in Docker Build Layer**  
+`Dockerfile:20-21` — `NEXT_PUBLIC_APP_URL` is passed as a build ARG and baked into the image. While public env vars are fine, ensure no secrets end up as build args (they're visible in `docker history`).
 
 ---
 
-## UI/UX Issues
+## BUGS
 
-### Accessibility
+**1. ✅ FIXED — Dead Query Variable in Transactions GET**  
+`src/app/api/transactions/route.ts:16` — `let query = db.select()...` is assigned but never used; the real query is built separately below it. Dead code.
 
-**1. `userScalable: false` blocks pinch-to-zoom**
-`src/app/layout.tsx` — `maximumScale: 1, userScalable: false` violates WCAG 1.4.4. Remove these to allow users to zoom.
+**2. Conditional Hook Call in `useAppSession`**  
+`src/lib/use-session.ts:32-39` — `useBetterAuthSession()` is called conditionally based on `authMode`. This violates React's Rules of Hooks. It works because `authMode` is static per build, but a linting error is suppressed (`eslint-disable-next-line`) rather than fixed. A cleaner approach: two separate modules or a wrapper that always calls both and returns the relevant one.
 
-**2. Navigation uses `<a>` tags instead of Next.js `<Link>`**
-`src/components/layout/sidebar.tsx` and `src/components/layout/bottom-nav.tsx` use plain `<a href>` which triggers full page reloads. Use `next/link` for client-side navigation — this will make the app feel significantly faster.
+**3. ✅ FIXED — `generateInsights` Deletes All User Insights Before Regenerating**  
+`src/lib/insights.ts:33` — Every call to `generateInsights` wipes all existing insights (including user's read/dismissed state), then recreates them. If a user dismisses an insight, it reappears on next generation.
 
-### Design & Interaction
+**4. ✅ FIXED — Settings PUT Passes `undefined` Fields to Drizzle**  
+`src/app/api/settings/route.ts:31` — When only `theme` is provided, other fields like `currency` become `undefined` in the `.set()` call. Drizzle may overwrite DB values with `NULL` depending on version. Filter out `undefined` values before calling `.set()`.
 
-**3. No "Forgot Password" flow**
-`src/app/(auth)/login/page.tsx` — No password reset link. If either of you forgets the password, there's no recovery path.
+**5. ✅ FIXED — Sidebar Uses `<a>` Instead of Next.js `<Link>`**  
+`src/components/layout/sidebar.tsx:61` — Anchor tags cause full page reloads on every navigation, losing client-side state and causing unnecessary re-renders. Same issue in `src/components/layout/bottom-nav.tsx`.
 
-**4. Bottom nav overlaps page content**
-The bottom nav is `position: fixed; height: 62px` but the main content area has no corresponding `padding-bottom`. The last items on any page get hidden behind the nav on mobile.
-
-**5. No hover states possible**
-The entire app uses inline `style={{}}` — CSS pseudo-classes (`:hover`, `:focus`, `:active`) don't work inline. Cards, buttons, and nav items feel static/unresponsive.
-
-**6. No loading skeletons**
-Pages show plain text like "Loading your financial position..." instead of skeleton UI that matches content layout. This causes layout shift when data loads.
-
-**7. No confirmation on destructive actions**
-There's a `confirm-dialog.tsx` component but it's unclear if delete operations (assets, liabilities, goals) actually use it. The API routes return data immediately on DELETE.
-
-### Feature Gaps
-
-**8. Hard-coded INR currency despite settings**
-`formatINR()` in `src/lib/utils.ts` is hardcoded to Indian Rupees. The `currency` user setting is stored but never used for formatting.
-
-**9. No shared household view**
-For a couple's finance app, each user has completely isolated data. There's no way to see combined net worth, shared goals, or household expenses.
-
-**10. No data export/backup**
-No option to export financial data as CSV/JSON. For a self-hosted app, there should be a backup mechanism.
-
-**11. No offline indicator**
-The service worker enables offline use but there's no UI feedback when the app is serving stale cached data.
-
-**12. Dark mode only — theme setting not reflected globally**
-`src/app/layout.tsx` hardcodes `data-theme="dark"`. The CSS only defines dark variables. The theme setting in user preferences has no light-mode styles to switch to.
+**6. `formatINR` Always Used Regardless of Currency Setting**  
+`src/lib/utils.ts` — The utility only has `formatINR`. Even if a user selects USD/EUR/GBP in settings, all amounts are still displayed as ₹ with Indian grouping.
 
 ---
 
-## Recommendations (Priority Order)
+## UI/UX ISSUES & SUGGESTIONS
 
-1. **Create `middleware.ts`** at the project root that imports and uses the proxy logic — most critical security gap.
-2. **Add Zod validation schemas** to all API routes — you already have the dependency installed.
-3. **Restrict registration** — add an allowed email list env variable or disable registration after initial setup.
-4. **Clear SW cache on logout** — post a message to the service worker to clear cached API responses.
-5. **Switch `<a>` to `<Link>`** in navigation — instant perceived performance boost.
-6. **Add `padding-bottom`** for bottom nav on mobile.
-7. **Remove `userScalable: false`** from viewport config.
-8. **Resolve category names** in the dashboard API response (join with categories table).
-9. **Add rate limiting** via a simple in-memory counter or edge middleware.
-10. **Add security headers** via `next.config.ts` headers config.
+### Issues
+
+| # | Issue | Location |
+|---|-------|----------|
+| 1 | **✅ FIXED — `userScalable: false`** prevents users from pinch-zooming — accessibility violation (WCAG 1.4.4) | `src/app/layout.tsx:50` |
+| 2 | **No error boundaries** — any component crash kills the entire app with a white screen | App-wide |
+| 3 | **No confirmation dialog before delete operations** — accidental taps on mobile delete assets/transactions permanently | Portfolio, Cashflow pages |
+| 4 | **Transactions limited to 100 with no pagination** — users who log daily will lose visibility after ~3 months | `src/app/api/transactions/route.ts:34` |
+| 5 | **No loading skeletons** — most pages show "Loading..." text instead of skeleton placeholders | Dashboard, Portfolio, etc. |
+| 6 | **All styles are inline** — no hover/focus states visible, no keyboard focus indicators, poor a11y | All pages |
+| 7 | **No undo/undo-toast after destructive actions** — if you delete a goal, it's gone instantly | Goals, Portfolio |
+
+### Suggestions & Enhancements
+
+| # | Suggestion | Priority |
+|---|-----------|----------|
+| 1 | **✅ FIXED — Add `<Link>` from `next/link`** for all navigation — enables client-side transitions, prefetching, and preserves state | High |
+| 2 | **Multi-currency support** — honor the user's currency setting for formatting; use `Intl.NumberFormat` with the stored currency | High |
+| 3 | **Add React Error Boundaries** wrapping each page route to gracefully handle crashes | High |
+| 4 | **Add pagination or infinite scroll** for transactions with a cursor-based approach | Medium |
+| 5 | **Add a "confirm delete" dialog** (you already have `confirm-dialog.tsx` in `ui/`) for destructive actions | Medium |
+| 6 | **Pull-to-refresh on mobile** or a visible "last synced" timestamp so users trust data freshness | Medium |
+| 7 | **Offline mode** — the PWA manifest and service worker exist but `sw.js` is minimal; cache API responses for offline viewing | Medium |
+| 8 | **Data export** — add CSV/JSON export for transactions and net-worth history (useful for tax filing in India) | Medium |
+| 9 | **Recurring transaction auto-generation** — `recurringTransactions` table exists but no cron/scheduled logic generates entries | Medium |
+| 10 | **Calendar page** — route exists but appears to be empty/placeholder; integrate EMI due dates and recurring transaction calendar | Low |
+| 11 | **Add skeleton loading states** with CSS shimmer animations matching your existing design tokens | Low |
+| 12 | **Two-user support** — since this is for you and your wife, consider a "family" mode with shared vs. personal views | Low |
+| 13 | **✅ FIXED — Remove `userScalable: false`** — let users zoom; this also improves iOS accessibility compliance | Low |
+| 14 | **Add `rel="noopener"` to external links** and consider `<meta name="robots" content="noindex">` since this is private | Low |
+
+---
+
+## Summary of Most Impactful Fixes
+
+1. **Validate the simple-auth cookie value** in the proxy (not just existence)
+2. **Use Zod validation** in the onboarding endpoint
+3. **Switch `<a>` to `<Link>`** in sidebar/bottom-nav for proper SPA navigation
+4. **Fix `generateInsights`** to not delete dismissed/read insights
+5. **Add CSP header** to the security headers function
+6. **Remove `userScalable: false`** from viewport
+
+---
+
+The app is well-structured overall — clean separation between auth modes, good use of Zod validation on most routes, proper user-scoped queries with `userId` checks, and a solid deployment setup. The issues above are the gaps to close.
