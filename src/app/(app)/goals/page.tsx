@@ -12,6 +12,7 @@ import { formatINR, getMonthsRemaining } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 interface Goal {
   id: string; name: string; targetAmount: string; currentAmount: string;
@@ -54,7 +55,7 @@ export default function GoalsPage() {
   const totalSaved = goalsList.reduce((s, g) => s + Number(g.currentAmount), 0);
   const totalPct = totalTarget > 0 ? totalSaved / totalTarget : 0;
 
-  if (loading) return <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-tertiary)" }}>Loading goals...</div>;
+  if (loading) return <PageSkeleton rows={3} />;
 
   return (
     <div>

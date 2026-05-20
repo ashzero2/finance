@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { formatINR, formatDateShort, getGreeting, getMonthsRemaining } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 interface DashboardData {
   user: { name: string };
@@ -58,11 +59,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-tertiary)" }}>
-        Loading your financial position...
-      </div>
-    );
+    return <PageSkeleton rows={5} />;
   }
 
   if (error) {

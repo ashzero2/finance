@@ -11,6 +11,7 @@ import { formatINR, formatDateShort } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 interface Transaction {
   id: string; type: string; amount: string; categoryId: string | null;
@@ -56,7 +57,7 @@ export default function CashFlowPage() {
   const savings = totalIncome - totalExpenses;
 
   if (loading) {
-    return <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-tertiary)" }}>Loading transactions...</div>;
+    return <PageSkeleton rows={6} />;
   }
 
   return (

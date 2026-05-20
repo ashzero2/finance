@@ -14,6 +14,7 @@ import { formatINR } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 interface Asset {
   id: string; name: string; category: string; subCategory: string | null;
@@ -108,7 +109,7 @@ export default function PortfolioPage() {
   })).filter(s => s.value > 0);
 
   if (loading) {
-    return <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-tertiary)" }}>Loading portfolio...</div>;
+    return <PageSkeleton rows={4} />;
   }
 
   return (
