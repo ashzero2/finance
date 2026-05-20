@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./sidebar";
 
@@ -88,7 +89,7 @@ export function BottomNav({ activePath }: BottomNavProps) {
           {moreItems.map((item) => {
             const isActive = item.id === activeId;
             return (
-              <a
+              <Link
                 key={item.id}
                 href={item.href}
                 style={{
@@ -119,7 +120,7 @@ export function BottomNav({ activePath }: BottomNavProps) {
                 >
                   {item.label}
                 </span>
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -190,7 +191,7 @@ export function BottomNav({ activePath }: BottomNavProps) {
 
 function NavTab({ item, isActive }: { item: { id: string; label: string; icon: string; href: string }; isActive: boolean }) {
   return (
-    <a
+    <Link
       href={item.href}
       style={{
         flex: 1,
@@ -206,6 +207,6 @@ function NavTab({ item, isActive }: { item: { id: string; label: string; icon: s
     >
       <Icon name={item.icon} size={20} color={isActive ? "var(--accent)" : "var(--text-tertiary)"} />
       <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>
-    </a>
+    </Link>
   );
 }

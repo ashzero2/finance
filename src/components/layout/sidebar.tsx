@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 
 export interface NavItem {
@@ -65,7 +66,7 @@ export function Sidebar({ activePath }: SidebarProps) {
         {[...NAV_ITEMS, { id: "settings", label: "Settings", icon: "settings", href: "/settings" }].map((item) => {
           const isActive = item.id === activeId;
           return (
-            <a
+            <Link
               key={item.id}
               href={item.href}
               title={item.label}
@@ -90,7 +91,7 @@ export function Sidebar({ activePath }: SidebarProps) {
               }}>
                 {item.label}
               </span>
-            </a>
+            </Link>
           );
         })}
       </div>
