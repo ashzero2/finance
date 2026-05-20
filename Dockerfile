@@ -17,6 +17,9 @@ COPY . .
 ARG NEXT_PUBLIC_APP_URL=https://finance.rahulaswin.dev
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
+ARG NEXT_PUBLIC_AUTH_MODE=better-auth
+ENV NEXT_PUBLIC_AUTH_MODE=$NEXT_PUBLIC_AUTH_MODE
+
 RUN pnpm build
 
 # ── Stage 3: runtime ──────────────────────────────────────────────────────────

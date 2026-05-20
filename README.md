@@ -427,35 +427,41 @@ docker run -p 3000:3000 \
 
 ### Using Docker Compose
 
-```yaml
-version: "3.8"
+A `docker-compose.yml` is included. Copy `.env.example` to `.env` and fill in the values, then:
 
-services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: finance
-      POSTGRES_PASSWORD: changeme
-      POSTGRES_DB: finance
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://finance:changeme@db:5432/finance
-      BETTER_AUTH_SECRET: your-secret-key-here
-      BETTER_AUTH_URL: https://finance.yourdomain.com
-    depends_on:
-      - db
-
-volumes:
-  pgdata:
+```bash
+docker compose up -d --build
 ```
+
+> **Important — `NEXT_PUBLIC_*` variables are build-time in Next.js.** They are baked into the client bundle when `next build` runs, not at container startup. The `docker-compose.yml` passes `NEXT_PUBLIC_AUTH_MODE` (and `NEXT_PUBLIC_APP_URL`) as Docker build args so the correct value is embedded during the build. Always run `--build` after changing these variables.
+
+#### Switching to simple auth
+
+Set these in your `.env`:
+
+```env
+AUTH_MODE=simple
+NEXT_PUBLIC_AUTH_MODE=simple
+```
+
+Then rebuild:
+
+```bash
+docker compose down -v && docker compose up -d --build
+```
+
+#### Environment variables passed to the container at runtime
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Auto-constructed from `DB_PASSWORD` |
+| `AUTH_MODE` | `"better-auth"` or `"simple"` |
+| `NEXT_PUBLIC_AUTH_MODE` | Must match `AUTH_MODE` — also passed as build arg |
+| `NEXT_PUBLIC_APP_URL` | Public URL — also passed as build arg |
+| `BETTER_AUTH_SECRET` | Required for better-auth mode |
+| `SIMPLE_AUTH_PASSWORD` | Optional password gate for simple mode |
+| `DEFAULT_USER_NAME` | Display name for simple-auth user (default: `"User"`) |
+| `DEFAULT_USER_EMAIL` | Email for simple-auth user (default: `"user@localhost"`) |
 
 ### Using systemd (Linux)
 

@@ -15,15 +15,24 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE:-better-auth}
     restart: unless-stopped
     ports:
       - "3002:3000"
     environment:
       DATABASE_URL: postgresql://finance:${DB_PASSWORD}@db:5432/finance
+      AUTH_MODE: ${AUTH_MODE}
+      NEXT_PUBLIC_AUTH_MODE: ${NEXT_PUBLIC_AUTH_MODE}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${NEXT_PUBLIC_APP_URL}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      DEFAULT_USER_NAME: ${DEFAULT_USER_NAME:-User}
+      DEFAULT_USER_EMAIL: ${DEFAULT_USER_EMAIL:-user@localhost}
+      SIMPLE_AUTH_PASSWORD: ${SIMPLE_AUTH_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
