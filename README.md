@@ -76,12 +76,29 @@ Built with **Next.js 16**, **TypeScript**, **PostgreSQL**, **Drizzle ORM**, and 
 - **App shell** pre-cached for instant loading
 - **Standalone display** — runs without browser chrome
 
-### 🔐 Authentication
+### 🔐 Authentication & Security
 - **Dual auth mode** — choose via `AUTH_MODE` env variable:
   - **`better-auth`** (default) — Full Better Auth with email/password login & registration
-  - **`simple`** — Zero-login mode; a default user is auto-created on first boot. Perfect for personal/family use.
+  - **`simple`** — Single default user, auto-created on first boot. Optional password gate via `SIMPLE_AUTH_PASSWORD` (cookie-based, 30-day expiry). Perfect for personal/family use.
 - **Session-based** security — all API routes are user-scoped
 - **Onboarding flow** for new users
+- **Registration restriction** — `ALLOWED_EMAILS` env var to whitelist sign-ups, or set to `"DISABLED"` to block all registration
+- **Rate limiting** — auth endpoints (10/15min), expensive operations (5/min), general API (60/min)
+- **Zod input validation** — all API mutation routes validated with strict schemas
+- **Security headers** — X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy
+
+### 📸 Financial Snapshots
+- **Periodic net worth snapshots** — track financial health over time
+- **Timeline comparison** — month-over-month net worth, assets, liabilities, savings rate
+- **Snapshot-driven insights** — auto-generated comparisons and trend analysis
+
+### 🔔 Toast Notifications & Confirmations
+- **Toast system** — success/error/info feedback on all actions
+- **Delete confirmations** — modal dialogs before destructive operations
+
+### 💱 Indian Formatting
+- **Indian comma system** — ₹1,00,000 formatting throughout the app
+- **Currency input component** — formatted input with real-time preview
 
 ---
 
@@ -117,31 +134,41 @@ src/
 │   │   └── onboarding/         # New user setup
 │   ├── (auth)/                 # Login & register pages
 │   └── api/                    # API routes
+│       ├── auth/[...all]/      # Better Auth catch-all handler
+│       ├── simple-auth/        # Simple auth password gate
 │       ├── assets/             # CRUD + snapshots
 │       ├── liabilities/        # CRUD
 │       ├── transactions/       # CRUD
 │       ├── goals/              # CRUD
 │       ├── insights/           # GET, POST (regenerate), PATCH (dismiss)
 │       ├── dashboard/          # Aggregated dashboard data
-│       ├── categories/         # Transaction categories
+│       ├── categories/         # Transaction categories CRUD
 │       ├── emergency-fund/     # Emergency fund config
+│       ├── snapshots/          # Financial snapshots
 │       ├── settings/           # User settings
-│       └── onboarding/         # Onboarding state
+│       └── onboarding/         # Onboarding state & wizard
 ├── components/
 │   ├── layout/                 # AppShell, Sidebar, BottomNav
 │   └── ui/                     # Reusable UI components
 ├── lib/
-│   ├── auth.ts                 # Better Auth configuration
+│   ├── auth.ts                 # Better Auth server configuration
+│   ├── auth-client.ts          # Better Auth client (signIn, signUp, useSession)
+│   ├── auth-mode.ts            # Auth mode config (simple vs better-auth)
+│   ├── get-session.ts          # Unified server-side session helper
+│   ├── simple-auth.ts          # Simple auth — default user bootstrap & session
+│   ├── use-session.ts          # Unified client-side useAppSession() hook
 │   ├── calculations.ts         # Financial calculation functions
-│   ├── insights.ts             # Insight generation engine
+│   ├── insights.ts             # Insight generation engine (15+ rules)
+│   ├── validations.ts          # Zod schemas for all API mutations
 │   ├── utils.ts                # Formatting utilities (INR, dates, etc.)
 │   └── db/
-│       ├── index.ts            # Database connection
-│       ├── schema.ts           # Drizzle schema (all tables)
+│       ├── index.ts            # Database connection (postgres-js + Drizzle)
+│       ├── schema.ts           # Drizzle schema (15 tables, 14 enums)
 │       └── seed.ts             # Database seeding script
 ├── types/
 │   └── index.ts                # TypeScript type definitions
-└── proxy.ts                    # Dev proxy configuration
+├── instrumentation.ts          # Startup — DB migrations + default user bootstrap
+└── proxy.ts                    # Next.js 16 proxy — auth, rate limiting, security headers
 
 public/
 ├── manifest.json               # PWA manifest
@@ -154,6 +181,8 @@ public/
 
 drizzle/
 └── migrations/                 # Database migrations
+
+.env.example                    # Environment variable template
 ```
 
 ---
@@ -181,19 +210,28 @@ pnpm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env.local` and edit:
+
+```bash
+cp .env.example .env.local
+```
+
+Or create a `.env.local` file manually:
 
 ```env
 # ── Database ──
-# PostgreSQL connection string
 DATABASE_URL="postgresql://user:password@localhost:5432/finance"
 
-# ── Better Auth ──
-# Secret key for signing sessions (generate with: openssl rand -hex 32)
-BETTER_AUTH_SECRET="your-secret-key-here"
+# ── Auth Mode ──
+AUTH_MODE=simple
+NEXT_PUBLIC_AUTH_MODE=simple
 
-# Base URL of your app (used for auth callbacks)
+# ── Better Auth (required only when AUTH_MODE=better-auth) ──
+BETTER_AUTH_SECRET="your-secret-key-here"
 BETTER_AUTH_URL="http://localhost:3000"
+
+# ── Public URL ──
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 #### Environment Variable Reference
@@ -201,13 +239,15 @@ BETTER_AUTH_URL="http://localhost:3000"
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | ✅ | Secret for session signing. Generate with `openssl rand -hex 32` |
-| `BETTER_AUTH_URL` | ✅ | Full URL where the app is hosted (e.g., `https://finance.example.com`) |
 | `AUTH_MODE` | ❌ | `"better-auth"` (default) or `"simple"` — see Auth Modes below |
 | `NEXT_PUBLIC_AUTH_MODE` | ❌ | Must match `AUTH_MODE` (needed for client-side) |
+| `NEXT_PUBLIC_APP_URL` | ❌ | Public URL of the app (default: `http://localhost:3000`) |
+| `BETTER_AUTH_SECRET` | ⚠️ | Required when `AUTH_MODE=better-auth`. Generate with `openssl rand -hex 32` |
+| `BETTER_AUTH_URL` | ⚠️ | Required when `AUTH_MODE=better-auth`. Full URL of the app. |
+| `SIMPLE_AUTH_PASSWORD` | ❌ | Password gate for simple mode. If set, users must enter this password once. Cookie lasts 30 days. |
 | `DEFAULT_USER_NAME` | ❌ | Display name for simple-auth default user (default: `"User"`) |
 | `DEFAULT_USER_EMAIL` | ❌ | Email for simple-auth default user (default: `"user@localhost"`) |
-| `SIMPLE_AUTH_PASSWORD` | ❌ | Password gate for simple mode. If set, users must enter this password once before accessing the app. Cookie lasts 30 days. |
+| `ALLOWED_EMAILS` | ❌ | Comma-separated list of allowed sign-up emails, or `"DISABLED"` to block registration (better-auth mode only) |
 
 ### 4. Choose Auth Mode
 
@@ -498,8 +538,8 @@ All API routes require authentication via session cookie. Unauthorized requests 
 | `DELETE` | `/api/assets/[id]` | Delete asset |
 | `GET` | `/api/assets/snapshots` | Asset value history & change data |
 | `GET` | `/api/liabilities` | List all user liabilities |
-| `POST` | `/api/liabilities` | Create liability |
-| `PUT` | `/api/liabilities/[id]` | Update liability |
+| `POST` | `/api/liabilities` | Create liability (+ insight refresh) |
+| `PUT` | `/api/liabilities/[id]` | Update liability (+ insight refresh) |
 | `DELETE` | `/api/liabilities/[id]` | Delete liability |
 | `GET` | `/api/transactions` | List transactions (filterable by type, month) |
 | `POST` | `/api/transactions` | Create transaction (+ insight refresh) |
@@ -512,10 +552,16 @@ All API routes require authentication via session cookie. Unauthorized requests 
 | `GET` | `/api/insights` | List active insights (non-dismissed) |
 | `POST` | `/api/insights` | Regenerate all insights |
 | `PATCH` | `/api/insights` | Dismiss or mark insight as read |
-| `GET` | `/api/categories` | List transaction categories |
+| `GET` | `/api/categories` | List transaction categories (system + user) |
+| `POST` | `/api/categories` | Create custom category |
+| `PUT` | `/api/categories` | Update custom category |
+| `DELETE` | `/api/categories` | Delete custom category (`?id=`) |
 | `GET/PUT` | `/api/emergency-fund` | Emergency fund configuration |
+| `GET/POST` | `/api/snapshots` | Financial snapshot history / create snapshot |
 | `GET/PUT` | `/api/settings` | User settings |
-| `POST` | `/api/onboarding` | Complete onboarding |
+| `GET/POST` | `/api/onboarding` | Onboarding status / complete onboarding wizard |
+| `POST` | `/api/simple-auth` | Validate password & set cookie (simple auth mode) |
+| `DELETE` | `/api/simple-auth` | Clear auth cookie / logout (simple auth mode) |
 
 ---
 
