@@ -22,6 +22,14 @@ interface Category {
   id: string; name: string; type: string; icon: string; color: string;
 }
 
+interface RecurringItem {
+  id: string; type: string; amount: string; categoryId: string | null;
+  categoryName: string | null; description: string | null;
+  frequency: string; dayOfMonth: number | null;
+  startDate: string; endDate: string | null;
+  isActive: boolean; lastGeneratedAt: string | null;
+}
+
 export default function CashFlowPage() {
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
@@ -29,6 +37,8 @@ export default function CashFlowPage() {
   const [tab, setTab] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
+  const [recurringLoading, setRecurringLoading] = useState(false);
   const { showToast } = useToast();
 
   const now = new Date();
@@ -44,7 +54,17 @@ export default function CashFlowPage() {
     }).finally(() => setLoading(false));
   }, [currentMonth]);
 
+  const fetchRecurring = useCallback(() => {
+    setRecurringLoading(true);
+    fetch("/api/recurring-transactions")
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setRecurringItems(Array.isArray(d) ? d : []))
+      .catch(() => setRecurringItems([]))
+      .finally(() => setRecurringLoading(false));
+  }, []);
+
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (tab === "recurring") fetchRecurring(); }, [tab, fetchRecurring]);
 
   const getCatName = (id: string | null) => cats.find(c => c.id === id)?.name || "Other";
 
@@ -98,10 +118,105 @@ export default function CashFlowPage() {
           { id: "all", label: "All" },
           { id: "income", label: "Income" },
           { id: "expenses", label: "Expenses" },
+          { id: "recurring", label: "Recurring" },
         ]} active={tab} onChange={setTab} />
       </FadeIn>
 
-      <div style={{ marginTop: 16 }}>
+      {/* Recurring Tab */}
+      {tab === "recurring" && (
+        <div style={{ marginTop: 16 }}>
+          {recurringLoading ? (
+            <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-tertiary)" }}>Loading...</div>
+          ) : recurringItems.length === 0 ? (
+            <EmptyState title="No recurring transactions" subtitle="Add recurring items from the Calendar page" icon="repeat" />
+          ) : (
+            <Card hover={false} style={{ padding: "4px 0" }}>
+              {recurringItems.map((item, i) => {
+                const isIncome = item.type === "income";
+                const freqLabel = item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1);
+                return (
+                  <FadeIn key={item.id} delay={120 + i * 20}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "13px 20px",
+                      borderBottom: i < recurringItems.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                      opacity: item.isActive ? 1 : 0.5,
+                      transition: "background 0.15s",
+                    }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-hover)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <div style={{
+                        width: 36, height: 36, borderRadius: "var(--radius-sm)",
+                        background: isIncome ? "var(--positive-dim)" : "var(--bg-elevated)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <Icon name={isIncome ? "trending-up" : "trending-down"} size={16}
+                          color={isIncome ? "var(--positive)" : "var(--text-tertiary)"} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{item.description || "Recurring"}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+                          {freqLabel}{item.dayOfMonth ? ` · Day ${item.dayOfMonth}` : ""}{item.categoryName ? ` · ${item.categoryName}` : ""}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0, marginRight: 8 }}>
+                        <div className="mono" style={{
+                          fontSize: 14, fontWeight: 600,
+                          color: isIncome ? "var(--positive)" : "var(--text-primary)",
+                        }}>
+                          {isIncome ? "+" : "-"}{formatINR(Number(item.amount))}
+                        </div>
+                        <div style={{ fontSize: 11, color: item.isActive ? "var(--positive)" : "var(--text-tertiary)" }}>
+                          {item.isActive ? "Active" : "Inactive"}
+                        </div>
+                      </div>
+                      {/* Toggle active */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/recurring-transactions/${item.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ isActive: !item.isActive }),
+                            });
+                            if (res.ok) {
+                              fetchRecurring();
+                              showToast(item.isActive ? "Paused" : "Activated", "info");
+                            }
+                          } catch { showToast("Failed to update", "error"); }
+                        }}
+                        aria-label={item.isActive ? "Pause" : "Activate"}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--text-tertiary)" }}
+                      >
+                        <Icon name={item.isActive ? "pause" : "play"} size={14} />
+                      </button>
+                      {/* Delete */}
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/api/recurring-transactions/${item.id}`, { method: "DELETE" });
+                            if (res.ok) {
+                              fetchRecurring();
+                              showToast("Recurring item removed", "info");
+                            }
+                          } catch { showToast("Failed to delete", "error"); }
+                        }}
+                        aria-label="Delete recurring"
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--text-tertiary)" }}
+                      >
+                        <Icon name="x" size={14} />
+                      </button>
+                    </div>
+                  </FadeIn>
+                );
+              })}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Transactions Tab */}
+      <div style={{ marginTop: 16, display: tab === "recurring" ? "none" : "block" }}>
         {filtered.length === 0 ? (
           <EmptyState title="No transactions" subtitle="Add your first transaction to see cash flow" icon="arrows-updown" />
         ) : (

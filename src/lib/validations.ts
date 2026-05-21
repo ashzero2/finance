@@ -128,6 +128,23 @@ export const insightActionSchema = z.object({
   action: z.enum(["dismiss", "read"]),
 });
 
+// ── Recurring Transaction schemas ──
+
+export const createRecurringTransactionSchema = z.object({
+  type: z.enum(["income", "expense"]),
+  amount: z.number().positive("Amount must be positive"),
+  categoryId: z.string().min(1).nullable().optional(),
+  description: z.string().min(1, "Description is required").max(200),
+  frequency: z.enum(["daily", "weekly", "monthly", "quarterly", "yearly"]),
+  dayOfMonth: z.number().int().min(1).max(31).nullable().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").nullable().optional(),
+});
+
+export const updateRecurringTransactionSchema = createRecurringTransactionSchema.partial().extend({
+  isActive: z.boolean().optional(),
+});
+
 // ── Onboarding schema ──
 
 export const onboardingSchema = z.object({

@@ -33,4 +33,15 @@ export async function register() {
       console.error("[simple-auth] failed to create default user:", err);
     }
   }
+
+  // Auto-generate recurring transactions on startup
+  try {
+    const { generateRecurringForAllUsers } = await import("./lib/recurring");
+    const count = await generateRecurringForAllUsers();
+    if (count > 0) {
+      console.log(`[recurring] generated ${count} transactions on startup`);
+    }
+  } catch (err) {
+    console.error("[recurring] auto-generation on startup failed:", err);
+  }
 }
