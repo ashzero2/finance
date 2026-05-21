@@ -10,6 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Shield,
   Car,
@@ -36,6 +37,11 @@ import {
   AlertTriangle,
   Zap,
   HelpCircle,
+  Landmark,
+  Pause,
+  Play,
+  Repeat,
+  PieChart,
   type LucideProps,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -54,6 +60,7 @@ const iconMap: Record<string, ComponentType<LucideProps>> = {
   "trending-up": TrendingUp,
   "trending-down": TrendingDown,
   "chevron-right": ChevronRight,
+  "chevron-left": ChevronLeft,
   "chevron-down": ChevronDown,
   shield: Shield,
   car: Car,
@@ -80,6 +87,11 @@ const iconMap: Record<string, ComponentType<LucideProps>> = {
   "alert-triangle": AlertTriangle,
   zap: Zap,
   "help-circle": HelpCircle,
+  landmark: Landmark,
+  pause: Pause,
+  play: Play,
+  repeat: Repeat,
+  "pie-chart": PieChart,
 };
 
 /* ------------------------------------------------------------------ */

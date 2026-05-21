@@ -12,7 +12,7 @@ interface BottomNavProps {
 // Primary tabs shown directly in the bottom bar
 const PRIMARY_IDS = ["dashboard", "portfolio", "cashflow", "goals"];
 // Items that go into the "More" menu
-const MORE_IDS = ["calendar", "insights"];
+const MORE_IDS = ["calendar", "reports", "insights"];
 // Settings is always in More
 const SETTINGS_ITEM = { id: "settings", label: "Settings", icon: "settings", href: "/settings" };
 

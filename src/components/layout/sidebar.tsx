@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "cashflow", label: "Cash Flow", icon: "arrows-updown", href: "/cashflow" },
   { id: "goals", label: "Goals", icon: "target", href: "/goals" },
   { id: "calendar", label: "Calendar", icon: "calendar", href: "/calendar" },
+  { id: "reports", label: "Reports", icon: "pie-chart", href: "/reports" },
   { id: "insights", label: "Insights", icon: "lightbulb", href: "/insights" },
 ];
 
