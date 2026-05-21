@@ -57,7 +57,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!onboardingChecked || onboardingCompleted === null) return;
     if (!onboardingCompleted && pathname !== "/onboarding") {
-      router.replace("/onboarding");
+      // Re-check onboarding status — it may have just been completed
+      fetch("/api/onboarding")
+        .then((r) => r.ok ? r.json() : { onboardingCompleted: false })
+        .then((data) => {
+          const completed = data.onboardingCompleted ?? false;
+          setOnboardingCompleted(completed);
+          if (!completed) {
+            router.replace("/onboarding");
+          }
+        })
+        .catch(() => {
+          router.replace("/onboarding");
+        });
     } else if (onboardingCompleted && pathname === "/onboarding") {
       router.replace("/dashboard");
     }
