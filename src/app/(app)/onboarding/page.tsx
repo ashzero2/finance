@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { FadeIn } from "@/components/ui/fade-in";
 import { formatINR } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { InvestmentSearch } from "@/components/ui/investment-search";
 
 interface BankEntry { name: string; amount: number }
 interface InvestmentEntry { name: string; amount: number }
@@ -165,11 +166,15 @@ export default function OnboardingPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {investments.map((inv, i) => (
               <Card key={i} hover={false} style={{ padding: 16 }}>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 200px" }}>
                     <label style={labelStyle}>Investment Name</label>
-                    <input style={inputStyle} placeholder="e.g. Mutual Funds" value={inv.name}
-                      onChange={e => { const n = [...investments]; n[i].name = e.target.value; setInvestments(n); }} />
+                    <InvestmentSearch
+                      value={inv.name}
+                      onChange={(v) => { const n = [...investments]; n[i].name = v; setInvestments(n); }}
+                      onSelect={(s) => { const n = [...investments]; n[i].name = s.name; setInvestments(n); }}
+                      placeholder="Search or type investment name..."
+                    />
                   </div>
                   <div style={{ width: 140 }}>
                     <label style={labelStyle}>Value (₹)</label>
@@ -245,11 +250,12 @@ export default function OnboardingPage() {
                 <Card key={preset.type}
                   onClick={() => setGoal({ ...goal, type: preset.type, name: preset.name })}
                   style={{
-                    padding: 16, textAlign: "center", cursor: "pointer",
+                    padding: 16, cursor: "pointer",
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     border: goal.type === preset.type ? `2px solid ${preset.color}` : undefined,
                   }}>
                   <Icon name={preset.icon} size={24} color={preset.color} style={{ marginBottom: 8 }} />
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{preset.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, textAlign: "center" }}>{preset.name}</div>
                 </Card>
               ))}
             </div>

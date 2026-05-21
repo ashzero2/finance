@@ -15,6 +15,8 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { InvestmentSearch, type InvestmentSuggestion } from "@/components/ui/investment-search";
+import { getPortfolioSuggestions } from "@/lib/portfolio-suggestions";
 
 interface Asset {
   id: string; name: string; category: string; subCategory: string | null;
@@ -57,6 +59,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   cash: "#34D399", bank: "#34D399", investment: "#60A5FA",
   property: "#FBBF24", vehicle: "#FB923C", other: "#8B8B96",
 };
+
+const INVESTMENT_SUB_CATEGORIES = [
+  { value: "", label: "Select type" },
+  { value: "stocks", label: "Stocks" },
+  { value: "mf", label: "Mutual Funds" },
+  { value: "etf", label: "ETF" },
+  { value: "fd", label: "Fixed Deposit" },
+  { value: "ppf", label: "PPF" },
+  { value: "nps", label: "NPS" },
+  { value: "gold", label: "Gold" },
+  { value: "crypto", label: "Crypto" },
+];
 
 const CATEGORY_ICONS: Record<string, string> = {
   cash: "wallet", bank: "wallet", investment: "trending-up",
@@ -188,6 +202,44 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Suggestions */}
+      {(() => {
+        const tips = getPortfolioSuggestions(assets);
+        if (tips.length === 0) return null;
+        return (
+          <div style={{ marginTop: 24 }}>
+            <SectionHeader title="Suggestions for You" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {tips.map((tip, i) => (
+                <FadeIn key={i} delay={220 + i * 40}>
+                  <Card
+                    style={{ padding: "14px 18px", cursor: "pointer" }}
+                    onClick={() => {
+                      setEditingAsset(null);
+                      setShowAssetForm(true);
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: "var(--radius-sm)",
+                        background: `${tip.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <Icon name={tip.icon} size={18} color={tip.color} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{tip.title}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.4 }}>{tip.description}</div>
+                      </div>
+                      <Icon name="chevron-right" size={16} color="var(--text-tertiary)" />
+                    </div>
+                  </Card>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Holdings */}
       <div style={{ marginTop: 28 }}>
         <SectionHeader title="Holdings" />
@@ -308,8 +360,8 @@ export default function PortfolioPage() {
 
       {/* Asset Form Modal */}
       {showAssetForm && (
-        <FormModal
-          title={editingAsset ? "Edit Asset" : "Add Asset"}
+        <AssetFormModal
+          editingAsset={editingAsset}
           onClose={() => { setShowAssetForm(false); setEditingAsset(null); }}
           onSubmit={async (data) => {
             if (editingAsset) {
@@ -323,14 +375,6 @@ export default function PortfolioPage() {
             setShowAssetForm(false);
             setDeleteConfirm({ type: "asset", id: editingAsset.id, name: editingAsset.name });
           } : undefined}
-          fields={[
-            { name: "name", label: "Name", type: "text", required: true, defaultValue: editingAsset?.name || "" },
-            { name: "category", label: "Category", type: "select", options: ASSET_CATEGORIES, required: true, defaultValue: editingAsset?.category || "bank" },
-            { name: "currentValue", label: "Current Value (₹)", type: "number", required: true, defaultValue: editingAsset ? Number(editingAsset.currentValue) : "" },
-            { name: "isLiquid", label: "Liquid (accessible in 48hrs)?", type: "toggle", defaultValue: editingAsset?.isLiquid || false },
-            { name: "institution", label: "Institution", type: "text", defaultValue: editingAsset?.institution || "" },
-            { name: "notes", label: "Notes", type: "text", defaultValue: editingAsset?.notes || "" },
-          ]}
         />
       )}
 
@@ -531,6 +575,170 @@ function FormModal({ title, onClose, onSubmit, onDelete, fields }: {
           ))}
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button type="submit" disabled={submitting} style={{
+              flex: 1, height: 42, borderRadius: "var(--radius-sm)", border: "none",
+              background: "var(--accent)", color: "var(--bg-root)", fontSize: 14, fontWeight: 600,
+              cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1,
+              fontFamily: "var(--font-sans)",
+            }}>
+              {submitting ? "Saving..." : "Save"}
+            </button>
+            {onDelete && (
+              <button type="button" onClick={onDelete} style={{
+                height: 42, padding: "0 16px", borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--negative)", background: "transparent",
+                color: "var(--negative)", fontSize: 14, fontWeight: 500, cursor: "pointer",
+                fontFamily: "var(--font-sans)",
+              }}>
+                Delete
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Asset Form with Investment Search ──
+
+function AssetFormModal({ editingAsset, onClose, onSubmit, onDelete }: {
+  editingAsset: Asset | null;
+  onClose: () => void;
+  onSubmit: (data: Record<string, unknown>) => Promise<void>;
+  onDelete?: () => void;
+}) {
+  const [name, setName] = useState(editingAsset?.name || "");
+  const [category, setCategory] = useState(editingAsset?.category || "bank");
+  const [subCategory, setSubCategory] = useState(editingAsset?.subCategory || "");
+  const [currentValue, setCurrentValue] = useState(editingAsset ? Number(editingAsset.currentValue) : 0);
+  const [isLiquid, setIsLiquid] = useState(editingAsset?.isLiquid || false);
+  const [institution, setInstitution] = useState(editingAsset?.institution || "");
+  const [notes, setNotes] = useState(editingAsset?.notes || "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const isInvestment = category === "investment";
+
+  const handleSuggestionSelect = (suggestion: InvestmentSuggestion) => {
+    setName(suggestion.name);
+    // Map suggestion type to subCategory
+    const typeMap: Record<string, string> = { stock: "stocks", etf: "etf", mf: "mf" };
+    setSubCategory(typeMap[suggestion.type] || "");
+    // Auto-set institution from exchange/symbol
+    if (suggestion.exchange && suggestion.symbol) {
+      setInstitution(`${suggestion.exchange}: ${suggestion.symbol}`);
+    } else if (suggestion.symbol) {
+      setInstitution(suggestion.symbol);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name) return;
+    setSubmitting(true);
+    await onSubmit({
+      name,
+      category,
+      subCategory: isInvestment && subCategory ? subCategory : null,
+      currentValue,
+      isLiquid,
+      institution: institution || null,
+      notes: notes || null,
+    });
+    setSubmitting(false);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", height: 40, padding: "0 12px", borderRadius: "var(--radius-sm)",
+    border: "1px solid var(--border)", background: "var(--bg-elevated)",
+    color: "var(--text-primary)", fontSize: 14, outline: "none", fontFamily: "var(--font-sans)",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6,
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)",
+      zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      animation: "fadeIn 0.2s ease",
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: "var(--bg-surface)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)",
+        width: "100%", maxWidth: 440, padding: 28, animation: "slideUp 0.25s ease",
+        maxHeight: "85vh", overflowY: "auto",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600 }}>{editingAsset ? "Edit Asset" : "Add Asset"}</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4 }}>
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Category */}
+          <div>
+            <label style={labelStyle}>Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle}>
+              {ASSET_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+
+          {/* Name — with InvestmentSearch for investments */}
+          <div>
+            <label style={labelStyle}>Name</label>
+            {isInvestment ? (
+              <InvestmentSearch
+                value={name}
+                onChange={setName}
+                onSelect={handleSuggestionSelect}
+                placeholder="Search stocks, ETFs, mutual funds..."
+              />
+            ) : (
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                required placeholder="e.g. HDFC Savings" style={inputStyle} />
+            )}
+          </div>
+
+          {/* Sub-category (only for investments) */}
+          {isInvestment && (
+            <div>
+              <label style={labelStyle}>Investment Type</label>
+              <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} style={inputStyle}>
+                {INVESTMENT_SUB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Current Value */}
+          <div>
+            <label style={labelStyle}>Current Value (₹)</label>
+            <CurrencyInput value={currentValue} onChange={setCurrentValue} required />
+          </div>
+
+          {/* Liquid toggle */}
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <input type="checkbox" checked={isLiquid} onChange={(e) => setIsLiquid(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: "var(--accent)" }} />
+            <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Liquid (accessible in 48hrs)?</span>
+          </label>
+
+          {/* Institution */}
+          <div>
+            <label style={labelStyle}>Institution</label>
+            <input type="text" value={institution} onChange={(e) => setInstitution(e.target.value)}
+              placeholder="e.g. Zerodha, HDFC Bank" style={inputStyle} />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={labelStyle}>Notes</label>
+            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes" style={inputStyle} />
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button type="submit" disabled={submitting || !name} style={{
               flex: 1, height: 42, borderRadius: "var(--radius-sm)", border: "none",
               background: "var(--accent)", color: "var(--bg-root)", fontSize: 14, fontWeight: 600,
               cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1,

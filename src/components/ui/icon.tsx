@@ -42,6 +42,7 @@ import {
   Play,
   Repeat,
   PieChart,
+  Search,
   type LucideProps,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -92,6 +93,7 @@ const iconMap: Record<string, ComponentType<LucideProps>> = {
   play: Play,
   repeat: Repeat,
   "pie-chart": PieChart,
+  search: Search,
 };
 
 /* ------------------------------------------------------------------ */
