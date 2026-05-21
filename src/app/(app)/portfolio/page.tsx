@@ -383,13 +383,38 @@ export default function PortfolioPage() {
                     if (!itemToRestore) return;
                     try {
                       const endpoint = type === "asset" ? "/api/assets" : "/api/liabilities";
-                      await fetch(endpoint, {
+                      // Strip DB-only fields and convert string amounts to numbers for Zod validation
+                      const payload = type === "asset"
+                        ? {
+                            name: (itemToRestore as Asset).name,
+                            category: (itemToRestore as Asset).category,
+                            subCategory: (itemToRestore as Asset).subCategory || null,
+                            currentValue: Number((itemToRestore as Asset).currentValue),
+                            isLiquid: (itemToRestore as Asset).isLiquid,
+                            institution: (itemToRestore as Asset).institution || null,
+                            notes: (itemToRestore as Asset).notes || null,
+                          }
+                        : {
+                            name: (itemToRestore as Liability).name,
+                            category: (itemToRestore as Liability).category,
+                            principalAmount: Number((itemToRestore as Liability).principalAmount),
+                            outstandingAmount: Number((itemToRestore as Liability).outstandingAmount),
+                            interestRate: (itemToRestore as Liability).interestRate ? Number((itemToRestore as Liability).interestRate) : null,
+                            emiAmount: (itemToRestore as Liability).emiAmount ? Number((itemToRestore as Liability).emiAmount) : null,
+                            emiDay: (itemToRestore as Liability).emiDay,
+                            institution: (itemToRestore as Liability).institution || null,
+                          };
+                      const res = await fetch(endpoint, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(itemToRestore),
+                        body: JSON.stringify(payload),
                       });
-                      fetchData();
-                      showToast(`${name} restored`, "success");
+                      if (res.ok) {
+                        fetchData();
+                        showToast(`${name} restored`, "success");
+                      } else {
+                        showToast("Failed to restore", "error");
+                      }
                     } catch {
                       showToast("Failed to restore", "error");
                     }

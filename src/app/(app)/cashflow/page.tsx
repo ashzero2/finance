@@ -170,7 +170,7 @@ export default function CashFlowPage() {
                   onUndo: async () => {
                     if (!txToRestore) return;
                     try {
-                      await fetch("/api/transactions", {
+                      const res = await fetch("/api/transactions", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -182,8 +182,12 @@ export default function CashFlowPage() {
                           isRecurring: txToRestore.isRecurring,
                         }),
                       });
-                      fetchData();
-                      showToast(`${name} restored`, "success");
+                      if (res.ok) {
+                        fetchData();
+                        showToast(`${name} restored`, "success");
+                      } else {
+                        showToast("Failed to restore", "error");
+                      }
                     } catch {
                       showToast("Failed to restore", "error");
                     }

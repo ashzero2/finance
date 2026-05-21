@@ -224,7 +224,7 @@ export default function GoalsPage() {
                   onUndo: async () => {
                     if (!goalToRestore) return;
                     try {
-                      await fetch("/api/goals", {
+                      const res = await fetch("/api/goals", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -239,8 +239,12 @@ export default function GoalsPage() {
                           category: goalToRestore.category,
                         }),
                       });
-                      fetchData();
-                      showToast(`${name} restored`, "success");
+                      if (res.ok) {
+                        fetchData();
+                        showToast(`${name} restored`, "success");
+                      } else {
+                        showToast("Failed to restore", "error");
+                      }
                     } catch {
                       showToast("Failed to restore", "error");
                     }
@@ -391,7 +395,7 @@ function GoalFormModal({ goal, onClose, onSave }: {
 function EfFormModal({ ef, onClose, onSave }: {
   ef: EmergencyFundData | null; onClose: () => void; onSave: (data: Record<string, unknown>) => Promise<void>;
 }) {
-  const [targetMonths, setTargetMonths] = useState(ef?.targetMonths || 6);
+  const [targetMonths, setTargetMonths] = useState<number | string>(ef?.targetMonths || 6);
   const [monthlyExp, setMonthlyExp] = useState(ef ? Number(ef.monthlyEssentialExpenses) : "");
   const [currentFund, setCurrentFund] = useState(ef ? Number(ef.currentFundAmount) : "");
   const [submitting, setSubmitting] = useState(false);
@@ -413,10 +417,10 @@ function EfFormModal({ ef, onClose, onSave }: {
         </div>
         <form onSubmit={async (e) => {
           e.preventDefault(); setSubmitting(true);
-          await onSave({ targetMonths, monthlyEssentialExpenses: Number(monthlyExp) || 0, currentFundAmount: Number(currentFund) || 0 });
+          await onSave({ targetMonths: Number(targetMonths) || 6, monthlyEssentialExpenses: Number(monthlyExp) || 0, currentFundAmount: Number(currentFund) || 0 });
           setSubmitting(false);
         }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <InputField label="Target Months" value={String(targetMonths)} onChange={v => setTargetMonths(Number(v) || 6)} type="number" required />
+          <InputField label="Target Months" value={String(targetMonths)} onChange={v => setTargetMonths(v === "" ? "" : Number(v))} type="number" required />
           <InputField label="Monthly Essential Expenses (₹)" value={String(monthlyExp)} onChange={v => setMonthlyExp(v === "" ? "" : Number(v))} type="number" required />
           <InputField label="Current Fund Amount (₹)" value={String(currentFund)} onChange={v => setCurrentFund(v === "" ? "" : Number(v))} type="number" />
           <button type="submit" disabled={submitting} style={{
