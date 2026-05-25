@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -43,6 +44,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -163,14 +165,25 @@ export default function DashboardPage() {
 
       {!hasData ? (
         <FadeIn delay={100}>
-          <Card hover={false} style={{ padding: "48px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, color: "var(--text-secondary)" }}>
-            <Icon name="bar-chart" size={48} color="var(--border)" style={{ marginBottom: 16 }} />
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: "var(--text-primary)" }}>
+          <Card hover={false} style={{ padding: "40px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <Icon name="bar-chart" size={48} color="var(--border)" style={{ marginBottom: 8 }} />
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, color: "var(--text-primary)" }}>
               Welcome to Finance
             </h2>
-            <p style={{ fontSize: 14, color: "var(--text-tertiary)", lineHeight: 1.6, maxWidth: 360, margin: "0 auto" }}>
-              Start by adding your assets, liabilities, and transactions. Your financial dashboard will come to life as you add data.
+            <p style={{ fontSize: 14, color: "var(--text-tertiary)", lineHeight: 1.6, maxWidth: 360, margin: "0 auto", marginBottom: 8 }}>
+              Get started by adding your financial data
             </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              <Button onClick={() => router.push("/portfolio")}>
+                <Icon name="plus" size={14} color="var(--bg-root)" /> Add Assets
+              </Button>
+              <Button variant="secondary" onClick={() => router.push("/cashflow")}>
+                <Icon name="plus" size={14} /> Record Transaction
+              </Button>
+              <Button variant="secondary" onClick={() => router.push("/goals")}>
+                <Icon name="target" size={14} /> Set a Goal
+              </Button>
+            </div>
           </Card>
         </FadeIn>
       ) : (

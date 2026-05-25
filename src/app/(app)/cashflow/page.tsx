@@ -41,18 +41,26 @@ export default function CashFlowPage() {
   const [recurringLoading, setRecurringLoading] = useState(false);
   const { showToast } = useToast();
 
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [viewMonth, setViewMonth] = useState(() => new Date());
+  const monthStr = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, "0")}`;
+  const monthLabel = viewMonth.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+  const navigateMonth = (delta: number) => {
+    setViewMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+  };
+
+  const isCurrentMonth = viewMonth.getMonth() === new Date().getMonth() && viewMonth.getFullYear() === new Date().getFullYear();
 
   const fetchData = useCallback(() => {
+    setLoading(true);
     Promise.all([
-      fetch(`/api/transactions?month=${currentMonth}`).then(r => r.ok ? r.json() : []),
+      fetch(`/api/transactions?month=${monthStr}`).then(r => r.ok ? r.json() : []),
       fetch("/api/categories").then(r => r.ok ? r.json() : []),
     ]).then(([t, c]) => {
       setTxns(Array.isArray(t) ? t : []);
       setCats(Array.isArray(c) ? c : []);
     }).finally(() => setLoading(false));
-  }, [currentMonth]);
+  }, [monthStr]);
 
   const fetchRecurring = useCallback(() => {
     setRecurringLoading(true);
@@ -88,6 +96,27 @@ export default function CashFlowPage() {
           <Button onClick={() => setShowForm(true)}>
             <Icon name="plus" size={14} color="var(--bg-root)" /> Add
           </Button>
+        </div>
+
+        {/* Month Navigation */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <button onClick={() => navigateMonth(-1)} aria-label="Previous month" style={{
+            background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+            width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", color: "var(--text-secondary)",
+          }}>
+            <Icon name="chevron-left" size={16} />
+          </button>
+          <span style={{ fontSize: 16, fontWeight: 600 }}>{monthLabel}</span>
+          <button onClick={() => navigateMonth(1)} aria-label="Next month" disabled={isCurrentMonth} style={{
+            background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+            width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: isCurrentMonth ? "not-allowed" : "pointer",
+            color: isCurrentMonth ? "var(--text-tertiary)" : "var(--text-secondary)",
+            opacity: isCurrentMonth ? 0.5 : 1,
+          }}>
+            <Icon name="chevron-right" size={16} />
+          </button>
         </div>
 
         {/* Monthly Summary */}

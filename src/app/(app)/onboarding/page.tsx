@@ -259,9 +259,27 @@ export default function OnboardingPage() {
                   <div style={{ fontSize: 13, fontWeight: 500, textAlign: "center" }}>{preset.name}</div>
                 </Card>
               ))}
+              {/* Custom Goal */}
+              <Card
+                onClick={() => setGoal({ ...goal, type: "custom", name: "" })}
+                style={{
+                  padding: 16, cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  border: goal.type === "custom" ? "2px solid var(--accent)" : undefined,
+                }}>
+                <Icon name="plus" size={24} color="var(--accent)" style={{ marginBottom: 8 }} />
+                <div style={{ fontSize: 13, fontWeight: 500, textAlign: "center" }}>Custom Goal</div>
+              </Card>
             </div>
             {goal.type && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+                {goal.type === "custom" && (
+                  <div>
+                    <label style={labelStyle}>Goal Name</label>
+                    <input style={inputStyle} placeholder="e.g. Wedding, MBA Fund"
+                      value={goal.name} onChange={e => setGoal({ ...goal, name: e.target.value })} />
+                  </div>
+                )}
                 <div>
                   <label style={labelStyle}>Target Amount (₹)</label>
                   <CurrencyInput value={goal.targetAmount} onChange={v => setGoal({ ...goal, targetAmount: v })} placeholder="0" />
