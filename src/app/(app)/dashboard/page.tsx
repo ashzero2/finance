@@ -148,23 +148,25 @@ export default function DashboardPage() {
             );
           })()}
 
-          {snapshotWarnOpen && (() => {
-            const daysSince = data.lastSnapshotDate
-              ? Math.floor((new Date(new Date().toISOString().split("T")[0]).getTime() - new Date(data.lastSnapshotDate).getTime()) / 86_400_000)
-              : null;
-            return (
-              <ConfirmDialog
-                title="Snapshot taken recently"
-                message={`Your last snapshot was ${daysSince} day${daysSince === 1 ? "" : "s"} ago. Snapshots are most useful at weekly or monthly intervals — taking them too frequently won't generate meaningful trend insights. Take one anyway?`}
-                confirmLabel="Take anyway"
-                variant="default"
-                onConfirm={() => { setSnapshotWarnOpen(false); doSnapshot(); }}
-                onCancel={() => setSnapshotWarnOpen(false)}
-              />
-            );
-          })()}
         </div>
       </FadeIn>
+
+      {/* Snapshot warning dialog — rendered outside flex container for proper centering */}
+      {snapshotWarnOpen && (() => {
+        const daysSince = data.lastSnapshotDate
+          ? Math.floor((new Date(new Date().toISOString().split("T")[0]).getTime() - new Date(data.lastSnapshotDate).getTime()) / 86_400_000)
+          : null;
+        return (
+          <ConfirmDialog
+            title="Snapshot taken recently"
+            message={`Your last snapshot was ${daysSince} day${daysSince === 1 ? "" : "s"} ago. Snapshots are most useful at weekly or monthly intervals — taking them too frequently won't generate meaningful trend insights. Take one anyway?`}
+            confirmLabel="Take anyway"
+            variant="default"
+            onConfirm={() => { setSnapshotWarnOpen(false); doSnapshot(); }}
+            onCancel={() => setSnapshotWarnOpen(false)}
+          />
+        );
+      })()}
 
       {!hasData ? (
         <FadeIn delay={100}>

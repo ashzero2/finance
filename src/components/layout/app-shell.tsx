@@ -41,29 +41,7 @@ export function AppShell({ children }: AppShellProps) {
           padding: "28px 32px",
         }}
       >
-        {/* Search trigger */}
-        <div style={{ maxWidth: 920, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-            <button
-              onClick={() => setSearchOpen(true)}
-              aria-label="Search"
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
-                background: "var(--bg-elevated)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)", cursor: "pointer",
-                color: "var(--text-tertiary)", fontSize: 13, fontFamily: "var(--font-sans)",
-              }}
-            >
-              <Icon name="search" size={14} />
-              <span className="hide-mobile">Search</span>
-              <kbd className="hide-mobile" style={{
-                fontSize: 10, color: "var(--text-tertiary)", background: "var(--bg-surface)",
-                border: "1px solid var(--border)", borderRadius: 3, padding: "1px 5px", marginLeft: 4,
-              }}>⌘K</kbd>
-            </button>
-          </div>
-          {children}
-        </div>
+        <div style={{ maxWidth: 920, margin: "0 auto" }}>{children}</div>
       </main>
       <BottomNav activePath={pathname} />
       <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
