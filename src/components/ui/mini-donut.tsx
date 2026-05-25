@@ -17,8 +17,9 @@ export function MiniDonut({ segments, size = 120, strokeWidth = 14 }: MiniDonutP
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   let offset = 0;
 
+  const ariaLabel = `Allocation chart: ${segments.map((s, i) => `segment ${i + 1}: ${((s.value / total) * 100).toFixed(0)}%`).join(", ")}`;
   return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+    <svg role="img" aria-label={ariaLabel} width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       {segments.map((seg, i) => {
         const pct = seg.value / total;
         const dash = pct * c;

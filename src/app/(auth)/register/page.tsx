@@ -11,6 +11,21 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const getPasswordStrength = (pw: string): { label: string; color: string; width: string } => {
+    if (pw.length < 6) return { label: "Too short", color: "var(--negative)", width: "20%" };
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (score <= 1) return { label: "Weak", color: "var(--negative)", width: "40%" };
+    if (score === 2) return { label: "Fair", color: "var(--warning)", width: "60%" };
+    if (score === 3) return { label: "Good", color: "var(--info)", width: "80%" };
+    return { label: "Strong", color: "var(--positive)", width: "100%" };
+  };
+
+  const strength = getPasswordStrength(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -208,6 +223,14 @@ export default function RegisterPage() {
                 fontFamily: "var(--font-sans)",
               }}
             />
+            {password && (
+              <div style={{ marginTop: 6 }}>
+                <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: strength.width, background: strength.color, transition: "all 0.2s" }} />
+                </div>
+                <div style={{ fontSize: 11, color: strength.color, marginTop: 4 }}>{strength.label}</div>
+              </div>
+            )}
           </div>
 
           <button

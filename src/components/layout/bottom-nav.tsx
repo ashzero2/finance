@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { NAV_ITEMS } from "./sidebar";
@@ -18,6 +18,27 @@ const SETTINGS_ITEM = { id: "settings", label: "Settings", icon: "settings", hre
 
 export function BottomNav({ activePath }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap for more menu
+  useEffect(() => {
+    if (!moreOpen || !moreRef.current) return;
+    const focusable = moreRef.current.querySelectorAll<HTMLElement>("a, button");
+    if (focusable.length > 0) focusable[0].focus();
+
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
+  }, [moreOpen]);
 
   const primaryItems = NAV_ITEMS.filter((item) => PRIMARY_IDS.includes(item.id));
   const moreItems = [
@@ -70,6 +91,9 @@ export function BottomNav({ activePath }: BottomNavProps) {
       {/* More menu popover */}
       {moreOpen && (
         <div
+          ref={moreRef}
+          role="menu"
+          aria-label="More navigation"
           style={{
             position: "fixed",
             bottom: "calc(var(--bottombar-h) + 8px)",

@@ -234,3 +234,17 @@ textarea:not(:disabled):hover {
     padding-bottom: calc(var(--bottombar-h) + 12px) !important;
   }
 }
+
+/* ═══ Reduced Motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══ Utility: hide on mobile ═══ */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+}

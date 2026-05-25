@@ -28,8 +28,9 @@ export function Sparkline({
   const d = pts.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
   const fillD = d + ` L${(width - pad).toFixed(1)},${height} L${pad},${height} Z`;
   const gradId = "sg_" + id;
+  const ariaLabel = `Trend chart showing values from ${vals[0].toLocaleString()} to ${vals[vals.length - 1].toLocaleString()}`;
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
+    <svg role="img" aria-label={ariaLabel} width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.25" />
