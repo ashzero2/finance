@@ -33,9 +33,29 @@ export async function POST(request: NextRequest) {
 
   const userId = session.user.id;
   const now = new Date();
+  const today = now.toISOString().split("T")[0];
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     .toISOString()
     .split("T")[0];
+
+  // Enforce once-per-day: snapshots make no sense more frequently than that
+  const existingToday = await db
+    .select({ id: financialSnapshots.id })
+    .from(financialSnapshots)
+    .where(
+      and(
+        eq(financialSnapshots.userId, userId),
+        eq(financialSnapshots.snapshotDate, today)
+      )
+    )
+    .limit(1);
+
+  if (existingToday.length > 0) {
+    return NextResponse.json(
+      { error: "already_taken_today", message: "You've already taken a snapshot today. Come back tomorrow." },
+      { status: 409 }
+    );
+  }
 
   // Fetch all current data
   const [userAssets, userLiabilities, monthTxns, userEf] = await Promise.all([
@@ -97,7 +117,7 @@ export async function POST(request: NextRequest) {
     .insert(financialSnapshots)
     .values({
       userId,
-      snapshotDate: now.toISOString().split("T")[0],
+      snapshotDate: today,
       periodType: "monthly",
       netWorth: String(netWorth),
       totalAssets: String(totalAssets),

@@ -13,6 +13,7 @@ import { formatINR, formatDateShort, getGreeting, getMonthsRemaining } from "@/l
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface DashboardData {
   user: { name: string };
@@ -35,6 +36,7 @@ interface DashboardData {
   runway: number;
   totalAssets: number;
   totalLiabilities: number;
+  lastSnapshotDate: string | null;
   goals: { id: string; name: string; icon: string; target: number; saved: number; monthly: number; color: string; deadline: string | null; isCompleted: boolean }[];
   insights: { id: string; type: string; title: string; body: string; priority: string }[];
   recentTransactions: { id: string; date: string; name: string; amount: number; category: string; type: string }[];
@@ -45,7 +47,27 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshotting, setSnapshotting] = useState(false);
+  const [snapshotWarnOpen, setSnapshotWarnOpen] = useState(false);
   const { showToast } = useToast();
+
+  const doSnapshot = async () => {
+    setSnapshotting(true);
+    try {
+      const res = await fetch("/api/snapshots", { method: "POST" });
+      if (res.ok) {
+        showToast("Snapshot captured! Check Insights for trends.", "success");
+        const r = await fetch("/api/dashboard");
+        if (r.ok) setData(await r.json());
+      } else if (res.status === 409) {
+        showToast("Already taken a snapshot today.", "info");
+      } else {
+        showToast("Failed to take snapshot", "error");
+      }
+    } catch {
+      showToast("Failed to take snapshot", "error");
+    }
+    setSnapshotting(false);
+  };
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -87,32 +109,51 @@ export default function DashboardPage() {
               {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          {hasData && (
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                setSnapshotting(true);
-                try {
-                  const res = await fetch("/api/snapshots", { method: "POST" });
-                  if (res.ok) {
-                    showToast("Snapshot captured! Check Insights for trends.", "success");
-                    // Refresh dashboard data to include new snapshot in sparkline
-                    const r = await fetch("/api/dashboard");
-                    if (r.ok) setData(await r.json());
-                  } else {
-                    showToast("Failed to take snapshot", "error");
-                  }
-                } catch {
-                  showToast("Failed to take snapshot", "error");
-                }
-                setSnapshotting(false);
-              }}
-              disabled={snapshotting}
-            >
-              <Icon name="camera" size={14} color="var(--text-secondary)" />
-              {snapshotting ? "Capturing..." : "Snapshot"}
-            </Button>
-          )}
+          {hasData && (() => {
+            const today = new Date().toISOString().split("T")[0];
+            const takenToday = data.lastSnapshotDate === today;
+            const daysSince = data.lastSnapshotDate
+              ? Math.floor((new Date(today).getTime() - new Date(data.lastSnapshotDate).getTime()) / 86_400_000)
+              : null;
+            const tooSoon = !takenToday && daysSince !== null && daysSince < 7;
+            const label = snapshotting
+              ? "Capturing..."
+              : takenToday
+                ? "Taken today"
+                : daysSince !== null
+                  ? `Snapshot · ${daysSince}d ago`
+                  : "Snapshot";
+            return (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (takenToday) return;
+                  if (tooSoon) { setSnapshotWarnOpen(true); return; }
+                  doSnapshot();
+                }}
+                disabled={snapshotting || takenToday}
+              >
+                <Icon name="camera" size={14} color="var(--text-secondary)" />
+                {label}
+              </Button>
+            );
+          })()}
+
+          {snapshotWarnOpen && (() => {
+            const daysSince = data.lastSnapshotDate
+              ? Math.floor((new Date(new Date().toISOString().split("T")[0]).getTime() - new Date(data.lastSnapshotDate).getTime()) / 86_400_000)
+              : null;
+            return (
+              <ConfirmDialog
+                title="Snapshot taken recently"
+                message={`Your last snapshot was ${daysSince} day${daysSince === 1 ? "" : "s"} ago. Snapshots are most useful at weekly or monthly intervals — taking them too frequently won't generate meaningful trend insights. Take one anyway?`}
+                confirmLabel="Take anyway"
+                variant="default"
+                onConfirm={() => { setSnapshotWarnOpen(false); doSnapshot(); }}
+                onCancel={() => setSnapshotWarnOpen(false)}
+              />
+            );
+          })()}
         </div>
       </FadeIn>
 
@@ -229,7 +270,7 @@ export default function DashboardPage() {
                 <div>
                   <SectionHeader title="Insights" />
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {data.insights.slice(0, 3).map((ins, i) => {
+                    {data.insights.slice(0, 3).map((ins) => {
                       const colorMap: Record<string, { color: string; bg: string; icon: string }> = {
                         positive: { color: "var(--positive)", bg: "var(--positive-dim)", icon: "check" },
                         warning: { color: "var(--warning)", bg: "var(--warning-dim)", icon: "lightbulb" },

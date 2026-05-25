@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
     runway: Math.round(runwayMonths * 10) / 10,
     totalAssets,
     totalLiabilities,
+    lastSnapshotDate: monthlySnapshots.length > 0 ? monthlySnapshots[0].snapshotDate : null,
     goals: formattedGoals,
     insights: formattedInsights,
     recentTransactions: formattedTxns,
