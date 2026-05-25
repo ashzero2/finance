@@ -82,6 +82,7 @@ export const createGoalSchema = z.object({
   icon: z.string().max(30).default("target"),
   color: z.string().max(10).default("#C9A84C"),
   monthlyContribution: z.number().min(0).nullable().optional(),
+  linkedAssetIds: z.array(z.string()).optional().default([]),
 });
 
 export const updateGoalSchema = createGoalSchema.partial().extend({

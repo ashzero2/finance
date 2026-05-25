@@ -1,0 +1,1 @@
+ALTER TABLE "goals" ADD COLUMN "linked_asset_ids" jsonb DEFAULT '[]'::jsonb;

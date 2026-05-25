@@ -310,6 +310,7 @@ export const goals = pgTable("goals", {
     precision: 15,
     scale: 2,
   }),
+  linkedAssetIds: jsonb("linked_asset_ids").$type<string[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

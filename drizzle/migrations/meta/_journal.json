@@ -8,6 +8,13 @@
       "when": 1779117348060,
       "tag": "0000_open_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779698232256,
+      "tag": "0001_fearless_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }

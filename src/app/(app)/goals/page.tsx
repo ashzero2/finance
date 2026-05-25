@@ -19,6 +19,11 @@ interface Goal {
   targetDate: string | null; priority: string; category: string;
   icon: string; color: string; isCompleted: boolean;
   monthlyContribution: string | null;
+  linkedAssetIds: string[];
+}
+
+interface AssetOption {
+  id: string; name: string; category: string; currentValue: string;
 }
 
 interface EmergencyFundData {
@@ -275,11 +280,23 @@ export default function GoalsPage() {
 function GoalDetailModal({ goal, onClose, onEdit, onDelete }: {
   goal: Goal; onClose: () => void; onEdit: () => void; onDelete: () => void;
 }) {
+  const [linkedAssetNames, setLinkedAssetNames] = useState<string[]>([]);
   const pct = Number(goal.targetAmount) > 0 ? Number(goal.currentAmount) / Number(goal.targetAmount) : 0;
   const remaining = Number(goal.targetAmount) - Number(goal.currentAmount);
   const months = goal.targetDate ? getMonthsRemaining(goal.targetDate) : 0;
   const monthly = Number(goal.monthlyContribution || 0);
   const projectedMonths = monthly > 0 ? Math.ceil(remaining / monthly) : Infinity;
+
+  // Fetch linked asset names
+  useEffect(() => {
+    if (!goal.linkedAssetIds || goal.linkedAssetIds.length === 0) return;
+    fetch("/api/assets").then(r => r.ok ? r.json() : []).then((allAssets: AssetOption[]) => {
+      const names = (goal.linkedAssetIds || [])
+        .map(id => allAssets.find((a: AssetOption) => a.id === id)?.name)
+        .filter(Boolean) as string[];
+      setLinkedAssetNames(names);
+    }).catch(() => {});
+  }, [goal.linkedAssetIds]);
 
   return (
     <div onClick={onClose} style={{
@@ -295,7 +312,7 @@ function GoalDetailModal({ goal, onClose, onEdit, onDelete }: {
             <Icon name="x" size={18} />
           </button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: linkedAssetNames.length > 0 ? 12 : 28 }}>
           <ProgressRing progress={pct} size={72} sw={5} color={goal.color}>
             <span className="mono" style={{ fontSize: 16, fontWeight: 700, color: goal.color }}>{Math.round(pct * 100)}%</span>
           </ProgressRing>
@@ -306,6 +323,20 @@ function GoalDetailModal({ goal, onClose, onEdit, onDelete }: {
             </div>
           </div>
         </div>
+        {linkedAssetNames.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+            <Icon name="link" size={12} color="var(--text-tertiary)" />
+            <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>Linked to:</span>
+            {linkedAssetNames.map((name, i) => (
+              <span key={i} style={{
+                fontSize: 11, fontWeight: 500, color: "var(--accent)",
+                background: "var(--accent-dim)", padding: "2px 8px",
+                borderRadius: "var(--radius-full)",
+              }}>{name}</span>
+            ))}
+            <span style={{ fontSize: 11, color: "var(--positive)", fontStyle: "italic" }}>· auto-tracking</span>
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
           {[
             { label: "Saved", value: formatINR(Number(goal.currentAmount)), color: goal.color },
@@ -346,7 +377,24 @@ function GoalFormModal({ goal, onClose, onSave }: {
   const [monthlyContribution, setMonthlyContribution] = useState(goal?.monthlyContribution ? Number(goal.monthlyContribution) : "");
   const [color, setColor] = useState(goal?.color || GOAL_COLORS[0]);
   const [icon, setIcon] = useState(goal?.icon || "target");
+  const [linkedAssetIds, setLinkedAssetIds] = useState<string[]>(goal?.linkedAssetIds || []);
+  const [availableAssets, setAvailableAssets] = useState<AssetOption[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const hasLinkedAssets = linkedAssetIds.length > 0;
+
+  // Fetch available assets on mount
+  useEffect(() => {
+    fetch("/api/assets").then(r => r.ok ? r.json() : []).then(data => {
+      setAvailableAssets(Array.isArray(data) ? data : []);
+    }).catch(() => {});
+  }, []);
+
+  const toggleAsset = (assetId: string) => {
+    setLinkedAssetIds(prev =>
+      prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
+    );
+  };
 
   return (
     <div onClick={onClose} style={{
@@ -363,11 +411,73 @@ function GoalFormModal({ goal, onClose, onSave }: {
             <Icon name="x" size={18} />
           </button>
         </div>
-        <form onSubmit={async (e) => { e.preventDefault(); setSubmitting(true); await onSave({ name, targetAmount: Number(targetAmount), currentAmount: Number(currentAmount), targetDate: targetDate || null, monthlyContribution: monthlyContribution ? Number(monthlyContribution) : null, color, icon }); setSubmitting(false); }}
+        <form onSubmit={async (e) => {
+          e.preventDefault(); setSubmitting(true);
+          await onSave({
+            name,
+            targetAmount: Number(targetAmount),
+            currentAmount: hasLinkedAssets ? 0 : Number(currentAmount),
+            targetDate: targetDate || null,
+            monthlyContribution: monthlyContribution ? Number(monthlyContribution) : null,
+            color, icon,
+            linkedAssetIds,
+          });
+          setSubmitting(false);
+        }}
           style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <InputField label="Goal Name" value={name} onChange={setName} required />
           <InputField label="Target Amount (₹)" value={String(targetAmount)} onChange={v => setTargetAmount(v === "" ? "" : Number(v))} type="number" required />
-          <InputField label="Saved So Far (₹)" value={String(currentAmount)} onChange={v => setCurrentAmount(v === "" ? "" : Number(v))} type="number" />
+
+          {/* Link Assets */}
+          {availableAssets.length > 0 && (
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 6 }}>
+                Link Assets <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(auto-tracks progress)</span>
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 140, overflowY: "auto",
+                border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: 6 }}>
+                {availableAssets.map(asset => {
+                  const isSelected = linkedAssetIds.includes(asset.id);
+                  return (
+                    <button key={asset.id} type="button" onClick={() => toggleAsset(asset.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+                        background: isSelected ? "var(--accent-dim)" : "transparent",
+                        border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                        textAlign: "left", fontFamily: "var(--font-sans)", width: "100%",
+                      }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                        border: isSelected ? "none" : "2px solid var(--border)",
+                        background: isSelected ? "var(--accent)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {isSelected && <Icon name="check" size={12} color="var(--bg-root)" />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>{asset.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{asset.category}</div>
+                      </div>
+                      <span className="mono" style={{ fontSize: 12, color: "var(--text-secondary)", flexShrink: 0 }}>
+                        {formatINR(Number(asset.currentValue), { compact: true })}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {hasLinkedAssets && (
+                <div style={{ fontSize: 11, color: "var(--positive)", marginTop: 4 }}>
+                  ✓ Progress will auto-update when linked assets change
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Saved So Far — only shown when no assets linked */}
+          {!hasLinkedAssets && (
+            <InputField label="Saved So Far (₹)" value={String(currentAmount)} onChange={v => setCurrentAmount(v === "" ? "" : Number(v))} type="number" />
+          )}
+
           <InputField label="Monthly Contribution (₹)" value={String(monthlyContribution)} onChange={v => setMonthlyContribution(v === "" ? "" : Number(v))} type="number" />
           <InputField label="Target Date" value={targetDate} onChange={setTargetDate} type="date" />
           <div>
