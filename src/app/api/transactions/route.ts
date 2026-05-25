@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAppSession } from "@/lib/get-session";
 import { db } from "@/lib/db";
 import { transactions } from "@/lib/db/schema";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { generateInsights } from "@/lib/insights";
 import { parseBody, createTransactionSchema } from "@/lib/validations";
 
@@ -28,12 +28,28 @@ export async function GET(request: NextRequest) {
     conditions.push(lte(transactions.date, end));
   }
 
-  const results = await db.select().from(transactions)
-    .where(and(...conditions))
-    .orderBy(desc(transactions.date))
-    .limit(100);
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = Math.min(100, Math.max(10, Number(searchParams.get("limit")) || 50));
+  const offset = (page - 1) * limit;
 
-  return NextResponse.json(results);
+  const [results, countResult] = await Promise.all([
+    db.select().from(transactions)
+      .where(and(...conditions))
+      .orderBy(desc(transactions.date))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(transactions)
+      .where(and(...conditions)),
+  ]);
+
+  const total = Number(countResult[0].count);
+
+  return NextResponse.json({
+    data: results,
+    total,
+    page,
+    hasMore: offset + results.length < total,
+  });
 }
 
 export async function POST(request: NextRequest) {

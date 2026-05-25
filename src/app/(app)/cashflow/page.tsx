@@ -39,6 +39,9 @@ export default function CashFlowPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
   const [recurringLoading, setRecurringLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { showToast } = useToast();
 
   const [viewMonth, setViewMonth] = useState(() => new Date());
@@ -53,14 +56,33 @@ export default function CashFlowPage() {
 
   const fetchData = useCallback(() => {
     setLoading(true);
+    setCurrentPage(1);
     Promise.all([
-      fetch(`/api/transactions?month=${monthStr}`).then(r => r.ok ? r.json() : []),
+      fetch(`/api/transactions?month=${monthStr}&page=1&limit=50`).then(r => r.ok ? r.json() : { data: [], hasMore: false }),
       fetch("/api/categories").then(r => r.ok ? r.json() : []),
     ]).then(([t, c]) => {
-      setTxns(Array.isArray(t) ? t : []);
+      const txData = t.data ?? (Array.isArray(t) ? t : []);
+      setTxns(txData);
+      setHasMore(t.hasMore ?? false);
       setCats(Array.isArray(c) ? c : []);
     }).finally(() => setLoading(false));
   }, [monthStr]);
+
+  const loadMore = useCallback(async () => {
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/transactions?month=${monthStr}&page=${nextPage}&limit=50`);
+      if (res.ok) {
+        const t = await res.json();
+        const txData = t.data ?? [];
+        setTxns(prev => [...prev, ...txData]);
+        setHasMore(t.hasMore ?? false);
+        setCurrentPage(nextPage);
+      }
+    } catch {}
+    setLoadingMore(false);
+  }, [monthStr, currentPage]);
 
   const fetchRecurring = useCallback(() => {
     setRecurringLoading(true);
@@ -295,6 +317,15 @@ export default function CashFlowPage() {
           </Card>
         )}
       </div>
+
+      {/* Load More */}
+      {hasMore && tab !== "recurring" && (
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? "Loading..." : "Load More"}
+          </Button>
+        </div>
+      )}
 
       <div style={{ height: 32 }} />
 
