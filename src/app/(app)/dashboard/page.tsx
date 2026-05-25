@@ -76,6 +76,9 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // Fire-and-forget: generate any pending recurring transactions
+    fetch("/api/recurring-transactions/generate", { method: "POST" }).catch(() => {});
+
     fetch("/api/dashboard")
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load dashboard");
