@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { BottomNav } from "./bottom-nav";
 import { SearchModal } from "@/components/ui/search-modal";
-import { Icon } from "@/components/ui/icon";
 
 interface AppShellProps {
   children: React.ReactNode;
