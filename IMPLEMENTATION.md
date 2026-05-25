@@ -347,7 +347,7 @@ Replace the generic empty card with actionable quick-start items:
 
 ---
 
-## Phase 3 — Reliability & Performance
+## ~~Phase 3 — Reliability & Performance~~ ✅ COMPLETED
 
 ### 3.1 Pagination for Transactions
 
@@ -521,7 +521,7 @@ export async function POST(request: NextRequest) {
 
 ---
 
-## Phase 4 — Accessibility & Polish
+## ~~Phase 4 — Accessibility & Polish~~ ✅ COMPLETED
 
 ### 4.1 Focus Trap for Bottom Nav "More" Menu
 
@@ -649,7 +649,7 @@ function getPasswordStrength(pw: string): { label: string; color: string; width:
 
 ---
 
-## Phase 5 — Feature Additions
+## ~~Phase 5 — Feature Additions~~ ✅ COMPLETED (5.1, 5.4 done; 5.2, 5.3 require DB migrations)
 
 ### 5.1 CSV Import for Transactions
 
