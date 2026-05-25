@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppSession } from "@/lib/use-session";
 import { AppShell } from "@/components/layout/app-shell";
 import { ToastProvider } from "@/components/ui/toast";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: session, isPending: sessionLoading } = useAppSession();
@@ -53,10 +54,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, sessionLoading]);
 
-  // Handle onboarding redirects (runs on pathname change, but no API calls)
+  const lastOnboardingCheckRef = useRef<number>(0);
+
+  // Handle onboarding redirects (runs on pathname change, throttled API calls)
   useEffect(() => {
     if (!onboardingChecked || onboardingCompleted === null) return;
     if (!onboardingCompleted && pathname !== "/onboarding") {
+      // Throttle re-checks to max once per 5 seconds
+      const now = Date.now();
+      if (now - lastOnboardingCheckRef.current < 5000) {
+        router.replace("/onboarding");
+        return;
+      }
+      lastOnboardingCheckRef.current = now;
+
       // Re-check onboarding status — it may have just been completed
       fetch("/api/onboarding")
         .then((r) => r.ok ? r.json() : { onboardingCompleted: false })
@@ -99,7 +110,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <LoadingScreen />;
   }
 
-  return <ToastProvider><AppShell>{children}</AppShell></ToastProvider>;
+  return <ToastProvider><AppShell><ErrorBoundary>{children}</ErrorBoundary></AppShell></ToastProvider>;
 }
 
 function LoadingScreen() {
