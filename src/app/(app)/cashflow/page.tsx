@@ -12,6 +12,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { CSVImportModal } from "@/components/ui/csv-import-modal";
 
 interface Transaction {
   id: string; type: string; amount: string; categoryId: string | null;
@@ -36,6 +37,7 @@ export default function CashFlowPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
   const [recurringLoading, setRecurringLoading] = useState(false);
@@ -115,9 +117,14 @@ export default function CashFlowPage() {
       <FadeIn delay={0}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <h1 style={{ fontSize: 22, fontWeight: 600 }}>Cash Flow</h1>
-          <Button onClick={() => setShowForm(true)}>
-            <Icon name="plus" size={14} color="var(--bg-root)" /> Add
-          </Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button variant="secondary" onClick={() => setShowImport(true)}>
+              <Icon name="upload" size={14} /> Import
+            </Button>
+            <Button onClick={() => setShowForm(true)}>
+              <Icon name="plus" size={14} color="var(--bg-root)" /> Add
+            </Button>
+          </div>
         </div>
 
         {/* Month Navigation */}
@@ -373,6 +380,14 @@ export default function CashFlowPage() {
             setDeleteConfirm(null);
           }}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      {/* CSV Import Modal */}
+      {showImport && (
+        <CSVImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => fetchData()}
         />
       )}
 
