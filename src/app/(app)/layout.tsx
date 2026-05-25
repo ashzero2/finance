@@ -54,6 +54,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, sessionLoading]);
 
+  // Real-time theme detection for "system" theme
+  useEffect(() => {
+    const savedTheme = typeof window !== "undefined" ? localStorage.getItem("finance-theme") : null;
+    if (savedTheme !== "system") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => {
+      document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+    };
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
   const lastOnboardingCheckRef = useRef<number>(0);
 
   // Handle onboarding redirects (runs on pathname change, throttled API calls)
