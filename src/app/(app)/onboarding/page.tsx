@@ -27,6 +27,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState<Record<number, boolean>>({});
 
   // Data
   const [banks, setBanks] = useState<BankEntry[]>([{ name: "", amount: 0 }]);
@@ -315,9 +316,17 @@ export default function OnboardingPage() {
         )}
       </FadeIn>
 
+      {/* Validation hint */}
+      {touched[step] && !canNext() && (
+        <div style={{ fontSize: 13, color: "var(--negative)", marginTop: 12 }}>
+          {step === 1 && "Enter at least one account name and balance to continue"}
+          {step === 4 && "Monthly income is required"}
+        </div>
+      )}
+
       {/* Navigation */}
       <div style={{ display: "flex", gap: 8, marginTop: 28 }}>
-        {step > 0 && step < 6 && (
+        {step > 0 && (
           <button onClick={() => setStep(step - 1)} style={{
             height: 42, padding: "0 20px", borderRadius: "var(--radius-sm)",
             border: "1px solid var(--border)", background: "transparent",
@@ -333,11 +342,14 @@ export default function OnboardingPage() {
         )}
         <div style={{ flex: 1 }} />
         {step < 6 && (
-          <button onClick={() => setStep(step + 1)} disabled={!canNext()} style={{
+          <button onClick={() => {
+            setTouched(prev => ({ ...prev, [step]: true }));
+            if (canNext()) setStep(step + 1);
+          }} disabled={false} style={{
             height: 42, padding: "0 28px", borderRadius: "var(--radius-sm)",
             border: "none", background: "var(--accent)", color: "var(--bg-root)",
-            fontSize: 14, fontWeight: 600, cursor: canNext() ? "pointer" : "not-allowed",
-            opacity: canNext() ? 1 : 0.5, fontFamily: "var(--font-sans)",
+            fontSize: 14, fontWeight: 600, cursor: "pointer",
+            opacity: canNext() ? 1 : 0.7, fontFamily: "var(--font-sans)",
           }}>Continue</button>
         )}
         {step === 6 && (

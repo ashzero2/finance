@@ -48,13 +48,17 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [snapshotting, setSnapshotting] = useState(false);
   const [snapshotWarnOpen, setSnapshotWarnOpen] = useState(false);
+  const [lastSnapshotAt, setLastSnapshotAt] = useState<number>(0);
   const { showToast } = useToast();
+
+  const canSnapshot = Date.now() - lastSnapshotAt > 60_000;
 
   const doSnapshot = async () => {
     setSnapshotting(true);
     try {
       const res = await fetch("/api/snapshots", { method: "POST" });
       if (res.ok) {
+        setLastSnapshotAt(Date.now());
         showToast("Snapshot captured! Check Insights for trends.", "success");
         const r = await fetch("/api/dashboard");
         if (r.ok) setData(await r.json());
@@ -127,14 +131,14 @@ export default function DashboardPage() {
               <Button
                 variant="secondary"
                 onClick={() => {
-                  if (takenToday) return;
+                  if (takenToday || !canSnapshot) return;
                   if (tooSoon) { setSnapshotWarnOpen(true); return; }
                   doSnapshot();
                 }}
-                disabled={snapshotting || takenToday}
+                disabled={snapshotting || takenToday || !canSnapshot}
               >
                 <Icon name="camera" size={14} color="var(--text-secondary)" />
-                {label}
+                {!canSnapshot ? "Wait..." : label}
               </Button>
             );
           })()}

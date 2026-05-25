@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { FadeIn } from "@/components/ui/fade-in";
@@ -30,12 +30,13 @@ export default function SettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const save = async (updates: Partial<Settings>) => {
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const save = (updates: Partial<Settings>) => {
     const newSettings = { ...settings, ...updates };
     setSettings(newSettings);
-    setSaving(true);
 
-    // Apply theme immediately + persist to localStorage for instant loading
+    // Apply theme immediately (visual feedback) + persist to localStorage
     if (updates.theme) {
       const theme = updates.theme;
       localStorage.setItem("finance-theme", theme);
@@ -47,10 +48,15 @@ export default function SettingsPage() {
       }
     }
 
-    try {
-      await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
-    } catch {}
-    setSaving(false);
+    // Debounce the API call
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
+      } catch {}
+      setSaving(false);
+    }, 600);
   };
 
   const handleLogout = async () => {

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ChangeIndicator } from "@/components/ui/change-indicator";
 import { SectionHeader } from "@/components/ui/section-header";
 import { formatINR } from "@/lib/utils";
+import { PageSkeleton } from "@/components/ui/skeleton";
 
 interface SnapshotItem {
   id: string;
@@ -90,18 +91,7 @@ export default function InsightsPage() {
     }).catch(() => {});
   };
 
-  if (loading)
-    return (
-      <div
-        style={{
-          padding: "48px 0",
-          textAlign: "center",
-          color: "var(--text-tertiary)",
-        }}
-      >
-        Loading insights...
-      </div>
-    );
+  if (loading) return <PageSkeleton rows={4} />;
 
   const highPriority = insights.filter((i) => i.priority === "high");
   const otherInsights = insights.filter((i) => i.priority !== "high");
